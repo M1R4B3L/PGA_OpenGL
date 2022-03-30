@@ -46,7 +46,7 @@ struct OpenGLInfo
 {
 
 };
-
+//VAO
 struct VertexV3V2 {
     vec3 pos;
     vec2 uv;
@@ -62,6 +62,72 @@ const VertexV3V2 vertices[] = {
 const u16 indices[] = {
     0,1,2,
     0,2,3
+};
+//VBO
+struct VertexBufferAttribute
+{
+    u8 location;
+    u8 componentCount;
+    u8 offset;
+};
+
+struct VertexBufferLayout
+{
+    std::vector<VertexBufferAttribute> attributes;
+    u8 stride;
+};
+
+struct VertexShaderAttribute
+{
+    u8 location;
+    u8 componentCount;
+};
+
+struct VertexShaderLayout
+{
+    std::vector<VertexShaderAttribute> attributes;
+};
+
+struct Vao
+{
+    GLuint handle;
+    GLuint programHandle;
+};
+//Models & Materials
+struct Model
+{
+    u32 meshIdx;
+    std::vector<u32> materialIdx;
+};
+
+struct Submesh
+{
+    VertexBufferLayout vertexBufferLayout;
+    std::vector<float> vertices;
+    std::vector<u32> indices;
+    u32 vertexOffset;
+    u32 indexOffset;
+    std::vector<Vao> vaos;
+};
+
+struct Mesh
+{
+    std::vector<Submesh> submeshes;
+    GLuint vertexBufferHandle;
+    GLuint indexBufferHandle;
+};
+
+struct Material
+{
+    std::string name;
+    vec3 albedo;
+    vec3 emissive;
+    f32 smoothness;
+    u32 albedoTextureIdx;
+    u32 emissiveTextureIdx;
+    u32 specularTextureIdx;
+    u32 normalsTextureIdx;
+    u32 bumpTextureIdx;
 };
 
 struct App
@@ -80,6 +146,9 @@ struct App
     ivec2 displaySize;
 
     std::vector<Texture>  textures;
+    std::vector<Material>  materials;
+    std::vector<Mesh>  meshes;
+    std::vector<Model>  models;
     std::vector<Program>  programs;
 
     // program indices
@@ -115,3 +184,4 @@ void Update(App* app);
 
 void Render(App* app);
 
+u32 LoadTexture2D(App* app, const char* filepath);

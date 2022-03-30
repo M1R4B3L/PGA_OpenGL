@@ -187,8 +187,6 @@ void Init(App* app)
     // - programs (and retrieve uniform indices)
     // - textures
 
-
-
     //Geometry
 
     glGenBuffers(1, &app->embeddedVertices);
@@ -214,6 +212,23 @@ void Init(App* app)
     app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
     Program& textureGeometryProgram = app->programs[app->texturedGeometryProgramIdx];
     app->programUniformTexture = glGetUniformLocation(textureGeometryProgram.handle, "uTexture");
+
+    int attributeCount;
+    char attributeName[128];
+    int attributeNameLenght;
+    int attributeSize;
+    GLenum attributeType;
+
+    int attributeLocation;
+
+    glGetProgramiv(textureGeometryProgram.handle, GL_ACTIVE_ATTRIBUTES, &attributeCount);
+
+    for (int i = 0; i <= attributeCount; ++i)
+    {
+        glGetActiveAttrib(textureGeometryProgram.handle, i, ARRAY_COUNT(attributeName), &attributeNameLenght, &attributeSize, &attributeType, attributeName);
+
+        attributeLocation = glGetAttribLocation(textureGeometryProgram.handle, attributeName);
+    }
 
     app->diceTexIdx = LoadTexture2D(app, "dice.png");
     app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
@@ -286,6 +301,12 @@ void Render(App* app)
 
                 glBindVertexArray(0);
                 glUseProgram(0);
+            }
+            break;
+
+        case Mode_Count:
+            {
+
             }
             break;
 
