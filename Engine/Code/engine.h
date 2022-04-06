@@ -39,6 +39,7 @@ struct Program
 enum Mode
 {
     Mode_TexturedQuad,
+    Mode_TextureMesh,
     Mode_Count
 };
 
@@ -160,6 +161,9 @@ struct App
     u32 blackTexIdx;
     u32 normalTexIdx;
     u32 magentaTexIdx;
+
+    //Meshes
+    u32 patricio;
 
     // Mode
     Mode mode;

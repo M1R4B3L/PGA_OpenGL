@@ -6,6 +6,7 @@
 //
 
 #include "engine.h"
+#include "assimp_model_loading.h"
 #include <imgui.h>
 #include <stb_image.h>
 #include <stb_image_write.h>
@@ -178,17 +179,8 @@ u32 LoadTexture2D(App* app, const char* filepath)
     }
 }
 
-void Init(App* app)
+void InitializeTextureQuad(App* app)
 {
-    // TODO: Initialize your resources here!
-    // - vertex buffers
-    // - element/index buffers
-    // - vaos
-    // - programs (and retrieve uniform indices)
-    // - textures
-
-    //Geometry
-
     glGenBuffers(1, &app->embeddedVertices);
     glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -213,6 +205,22 @@ void Init(App* app)
     Program& textureGeometryProgram = app->programs[app->texturedGeometryProgramIdx];
     app->programUniformTexture = glGetUniformLocation(textureGeometryProgram.handle, "uTexture");
 
+    app->diceTexIdx = LoadTexture2D(app, "dice.png");
+    app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
+    app->blackTexIdx = LoadTexture2D(app, "color_black.png");
+    app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
+    app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
+
+    app->mode = Mode_TexturedQuad;
+}
+
+void InitalizeTextureMesh(App* app)
+{
+
+    app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_PATRICIO");
+    Program& textureGeometryProgram = app->programs[app->texturedGeometryProgramIdx];
+    app->programUniformTexture = glGetUniformLocation(textureGeometryProgram.handle, "uTexture");
+
     int attributeCount;
     char attributeName[128];
     int attributeNameLenght;
@@ -225,18 +233,36 @@ void Init(App* app)
 
     for (int i = 0; i <= attributeCount; ++i)
     {
-        glGetActiveAttrib(textureGeometryProgram.handle, i, ARRAY_COUNT(attributeName), &attributeNameLenght, &attributeSize, &attributeType, attributeName);
+        glGetActiveAttrib(textureGeometryProgram.handle, i, 
+            ARRAY_COUNT(attributeName), 
+            &attributeNameLenght, 
+            &attributeSize, 
+            &attributeType, 
+            attributeName);
 
         attributeLocation = glGetAttribLocation(textureGeometryProgram.handle, attributeName);
+
+
     }
 
-    app->diceTexIdx = LoadTexture2D(app, "dice.png");
-    app->whiteTexIdx = LoadTexture2D(app, "color_white.png");
-    app->blackTexIdx = LoadTexture2D(app, "color_black.png");
-    app->normalTexIdx = LoadTexture2D(app, "color_normal.png");
-    app->magentaTexIdx = LoadTexture2D(app, "color_magenta.png");
+    app->patricio = LoadModel(app, "Patrick/Patrick.obj");
 
-    app->mode = Mode_TexturedQuad;
+    app->mode = Mode_TextureMesh;
+}
+
+void Init(App* app)
+{
+    // TODO: Initialize your resources here!
+    // - vertex buffers
+    // - element/index buffers
+    // - vaos
+    // - programs (and retrieve uniform indices)
+    // - textures
+
+    //Geometry
+
+    InitalizeTextureMesh(app);
+
 }
 
 void Gui(App* app)
