@@ -28,42 +28,6 @@ struct Texture
     std::string filepath;
 };
 
-struct Program
-{
-    GLuint             handle;
-    std::string        filepath;
-    std::string        programName;
-    u64                lastWriteTimestamp; // What is this for?
-};
-
-enum Mode
-{
-    Mode_TexturedQuad,
-    Mode_TextureMesh,
-    Mode_Count
-};
-
-struct OpenGLInfo
-{
-
-};
-//VAO
-struct VertexV3V2 {
-    vec3 pos;
-    vec2 uv;
-};
-
-const VertexV3V2 vertices[] = {
-    { {-0.5,-0.5,0.0}, {0.0,0.0} },
-    { { 0.5,-0.5,0.0}, {1.0,0.0} },
-    { { 0.5, 0.5,0.0}, {1.0,1.0} },
-    { {-0.5, 0.5,0.0}, {0.0,1.0} },
-};
-
-const u16 indices[] = {
-    0,1,2,
-    0,2,3
-};
 //VBO
 struct VertexBufferAttribute
 {
@@ -94,6 +58,45 @@ struct Vao
     GLuint handle;
     GLuint programHandle;
 };
+
+struct Program
+{
+    GLuint             handle;
+    std::string        filepath;
+    std::string        programName;
+    u64                lastWriteTimestamp; // What is this for?
+    VertexShaderLayout vertexInputLayout;
+};
+
+enum Mode
+{
+    Mode_TexturedQuad,
+    Mode_TextureMesh,
+    Mode_Count
+};
+
+struct OpenGLInfo
+{
+
+};
+//VAO
+struct VertexV3V2 {
+    vec3 pos;
+    vec2 uv;
+};
+
+const VertexV3V2 vertices[] = {
+    { {-0.5,-0.5,0.0}, {0.0,0.0} },
+    { { 0.5,-0.5,0.0}, {1.0,0.0} },
+    { { 0.5, 0.5,0.0}, {1.0,1.0} },
+    { {-0.5, 0.5,0.0}, {0.0,1.0} },
+};
+
+const u16 indices[] = {
+    0,1,2,
+    0,2,3
+};
+
 //Models & Materials
 struct Model
 {
@@ -162,8 +165,11 @@ struct App
     u32 normalTexIdx;
     u32 magentaTexIdx;
 
-    //Meshes
+    //Model
     u32 patricio;
+
+    //Texture
+    u32 textureMeshProgram_uTexture;
 
     // Mode
     Mode mode;
@@ -185,6 +191,8 @@ void Init(App* app);
 void Gui(App* app);
 
 void Update(App* app);
+
+GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program);
 
 void Render(App* app);
 
