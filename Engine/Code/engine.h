@@ -13,6 +13,7 @@ typedef glm::vec4  vec4;
 typedef glm::ivec2 ivec2;
 typedef glm::ivec3 ivec3;
 typedef glm::ivec4 ivec4;
+typedef glm::mat4  mat4;
 
 struct Image
 {
@@ -134,14 +135,31 @@ struct Material
     u32 bumpTextureIdx;
 };
 
+struct Camera
+{
+    vec3 pos;
+    vec3 target;
+    f32  aspectRatio;
+    f32  zNear = 0.01f;
+    f32  zFar = 10000.0f;
+};
+
 struct App
 {
     // Loop
     f32  deltaTime;
     bool isRunning;
+    
+    f32 time = 0.0f;
 
     // Input
     Input input;
+
+    // Camera
+    Camera camera;
+
+    mat4 projection;
+    mat4 view;
 
     // Graphics
     char gpuName[64];

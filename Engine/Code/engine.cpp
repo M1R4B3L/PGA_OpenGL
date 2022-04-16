@@ -181,8 +181,35 @@ u32 LoadTexture2D(App* app, const char* filepath)
 
 void InitializeTextureQuad(App* app)
 {
-    glGenBuffers(1, &app->embeddedVertices);
-    glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
+    
+    app->meshes.push_back(Mesh{});
+    Mesh& mesh = app->meshes.back();
+    u32 meshIdx = (u32)app->meshes.size() - 1u;
+
+    f32 vertices[] = { -0.5,-0.5, 0.0, 0.0, 0.0,
+                        0.5,-0.5, 0.0, 1.0, 0.0,
+                        0.5, 0.5, 0.0, 1.0, 1.0,
+                       -0.5, 0.5, 0.0, 0.0, 1.0 };
+
+    u16 indices[] = { 0, 1, 2, 
+                      0, 2, 3 };
+
+    VertexBufferLayout vertexBufferLayout = {};
+    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
+    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 1, 2, 3 * sizeof(float) });
+    vertexBufferLayout.stride = 5 * sizeof(float);
+
+    Submesh submesh = {};
+    submesh.vertexBufferLayout = vertexBufferLayout;
+    i32 sizeVert = sizeof(vertices) / sizeof(vertices[0]);
+    copy(vertices, vertices + sizeVert, submesh.vertices.begin());
+    i32 sizeInd = sizeof(indices) / sizeof(indices[0]);
+    copy(indices, indices + sizeInd, submesh.indices.begin());
+
+    (&mesh)->submeshes.push_back(submesh);
+
+    glGenBuffers(1, &mesh.vertexBufferHandle);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -267,6 +294,19 @@ void InitalizeTextureMesh(App* app)
     app->mode = Mode_TextureMesh;
 }
 
+mat4 TransformScale(const vec3& scaleFactors)
+{
+    mat4 transform = glm::scale(scaleFactors);
+    return transform;
+}
+
+mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
+{
+    mat4 transform = glm::translate(pos);
+    transform = glm::scale(transform, scaleFactors);
+    return transform;
+}
+
 void Init(App* app)
 {
     // TODO: Initialize your resources here!
@@ -280,11 +320,17 @@ void Init(App* app)
 
     InitalizeTextureMesh(app);
 
+    app->camera.pos = glm::vec3(0.0f);
+    app->camera.target =  glm::vec3(0.0f);
+    app->camera.aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
+
+    app->projection = glm::perspective(glm::radians(60.0f), app->camera.aspectRatio, app->camera.zNear, app->camera.zFar);
+    app->view = glm::lookAt(vec3(2.0f,-2.0f,3.0f), vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
 }
 
 void Gui(App* app)
 {
-    static bool demoOpen = true;
+    static bool demoOpen = false;
     static bool engineInfoOpen = true;
 
     if (engineInfoOpen)
@@ -403,6 +449,8 @@ void Render(App* app)
                 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+                glEnable(GL_DEPTH_TEST);
+
                 glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
                 Program& textureMeshProgram = app->programs[app->texturedGeometryProgramIdx];
@@ -415,6 +463,16 @@ void Render(App* app)
                 {
                     GLuint vao = FindVAO(mesh, i, textureMeshProgram);
                     glBindVertexArray(vao);
+
+                    //World == Model   MVP(Model, view, projection)
+                    mat4 world = TransformPositionScale(vec3(0.0f, 1.0f, 0.0f), vec3(0.45f));
+                    world = glm::rotate(world, glm::radians(app->time), glm::vec3(0.0f, 1.0f, 0.0f));
+                    app->time += 1.0f;
+
+                    mat4 worldViewProjection = app->projection * app->view * world;
+
+                    int mvpLoc = glGetUniformLocation(app->programs[app->texturedGeometryProgramIdx].handle, "uWorldViewProjectionMatrix");
+                    glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, glm::value_ptr(worldViewProjection));
 
                     u32 submeshMaterialIdx = model.materialIdx[i];
                     Material& submeshMaterial = app->materials[submeshMaterialIdx];
