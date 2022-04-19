@@ -160,6 +160,7 @@ struct App
 
     mat4 projection;
     mat4 view;
+    mat4 worldViewProjection;
 
     // Graphics
     char gpuName[64];
@@ -202,6 +203,11 @@ struct App
 
     // VAO object to link our screen filling quad with our textured quad shader
     GLuint vao;
+
+    // Uniforms
+    i32 maxUniformBufferSize;
+    i32 uniformBlockAlignment;
+    u32 bufferHandle;
 };
 
 void Init(App* app);

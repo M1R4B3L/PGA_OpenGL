@@ -326,6 +326,14 @@ void Init(App* app)
 
     app->projection = glm::perspective(glm::radians(60.0f), app->camera.aspectRatio, app->camera.zNear, app->camera.zFar);
     app->view = glm::lookAt(vec3(2.0f,-2.0f,3.0f), vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
+
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
+
+    glGenBuffers(1, &app->bufferHandle);
+    glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
+    glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 void Gui(App* app)
@@ -351,6 +359,7 @@ void Gui(App* app)
 void Update(App* app)
 {
     // You can handle app->input keyboard/mouse here
+
 }
 
 GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
@@ -446,6 +455,33 @@ void Render(App* app)
 
         case Mode_TextureMesh:
             {
+                //World == Model   MVP(Model, view, projection)
+                mat4 world = TransformPositionScale(vec3(0.0f, 1.0f, 0.0f), vec3(0.45f));
+                world = glm::rotate(world, glm::radians(app->time), glm::vec3(0.0f, 1.0f, 0.0f));
+                app->time += 1.0f;
+
+                app->worldViewProjection = app->projection * app->view * world;
+                /*int mvpLoc = glGetUniformLocation(app->programs[app->texturedGeometryProgramIdx].handle, "uWorldViewProjectionMatrix");
+                glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, glm::value_ptr(app->worldViewProjection));*/
+
+                //Uniforms
+                glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
+                u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+                u32 bufferHead = 0;
+                memcpy(bufferData + bufferHead, glm::value_ptr(world), sizeof(glm::mat4));
+                bufferHead += sizeof(glm::mat4);
+
+                memcpy(bufferData + bufferHead, glm::value_ptr(app->worldViewProjection), sizeof(glm::mat4));
+                bufferHead += sizeof(glm::mat4);
+
+                glUnmapBuffer(GL_UNIFORM_BUFFER);
+                glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+                u32 blockOffset = 0;
+                u32 blockSize = sizeof(glm::mat4) * 2;
+                glBindBufferRange(GL_UNIFORM_BUFFER, 1, app->bufferHandle, blockOffset, blockSize);
+
+
                 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -463,16 +499,6 @@ void Render(App* app)
                 {
                     GLuint vao = FindVAO(mesh, i, textureMeshProgram);
                     glBindVertexArray(vao);
-
-                    //World == Model   MVP(Model, view, projection)
-                    mat4 world = TransformPositionScale(vec3(0.0f, 1.0f, 0.0f), vec3(0.45f));
-                    world = glm::rotate(world, glm::radians(app->time), glm::vec3(0.0f, 1.0f, 0.0f));
-                    app->time += 1.0f;
-
-                    mat4 worldViewProjection = app->projection * app->view * world;
-
-                    int mvpLoc = glGetUniformLocation(app->programs[app->texturedGeometryProgramIdx].handle, "uWorldViewProjectionMatrix");
-                    glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, glm::value_ptr(worldViewProjection));
 
                     u32 submeshMaterialIdx = model.materialIdx[i];
                     Material& submeshMaterial = app->materials[submeshMaterialIdx];
