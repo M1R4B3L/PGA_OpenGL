@@ -99,6 +99,49 @@ u32 LoadProgram(App* app, const char* filepath, const char* programName)
     program.filepath = filepath;
     program.programName = programName;
     program.lastWriteTimestamp = GetFileLastWriteTimestamp(filepath);
+
+    int attributeCount;
+    char attributeName[128];
+    int attributeNameLenght;
+    int attributeSize;
+    GLenum attributeType;
+
+    int attributeLocation;
+
+    glGetProgramiv(program.handle, GL_ACTIVE_ATTRIBUTES, &attributeCount);
+
+    for (int i = 0; i <= attributeCount; ++i)
+    {
+        glGetActiveAttrib(program.handle, i,
+            ARRAY_COUNT(attributeName),
+            &attributeNameLenght,
+            &attributeSize,
+            &attributeType,
+            attributeName);
+
+        attributeLocation = glGetAttribLocation(program.handle, attributeName);
+
+        u8 realCount = 0;
+
+        switch (attributeType)
+        {
+        case GL_FLOAT:
+            realCount = 1;
+            break;
+        case GL_FLOAT_VEC2:
+            realCount = 2;
+            break;
+        case GL_FLOAT_VEC3:
+            realCount = 3;
+            break;
+        default:
+            realCount = 1;
+            break;
+        }
+
+        program.vertexInputLayout.attributes.push_back({ (u8)attributeLocation , (u8)realCount });
+    }
+
     app->programs.push_back(program);
 
     return app->programs.size() - 1;
@@ -179,6 +222,19 @@ u32 LoadTexture2D(App* app, const char* filepath)
     }
 }
 
+mat4 TransformScale(const vec3& scaleFactors)
+{
+    mat4 transform = glm::scale(scaleFactors);
+    return transform;
+}
+
+mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
+{
+    mat4 transform = glm::translate(pos);
+    transform = glm::scale(transform, scaleFactors);
+    return transform;
+}
+
 void InitializeTextureQuad(App* app)
 {
     
@@ -243,68 +299,25 @@ void InitializeTextureQuad(App* app)
 
 void InitalizeTextureMesh(App* app)
 {
-    app->patricio = LoadModel(app, "Patrick/Patrick.obj");
-    app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_PATRICIO");
+    u32 patrick = LoadModel(app, "Patrick/Patrick.obj");
 
+    Entity enTity1 = Entity(glm::mat4(1.0f), patrick, 0,0);
+    enTity1.worldMatrix = TransformPositionScale(vec3(0.0, 0.0, 0.0), vec3(0.45f));
+    app->enTities.push_back(enTity1);
+
+    Entity enTity2 = Entity(glm::mat4(1.0f), patrick, 0, 0);
+    enTity2.worldMatrix = TransformPositionScale(vec3(2.0, 0.0, 5.0), vec3(0.45f));
+    app->enTities.push_back(enTity2);
+
+    Entity enTity3 = Entity(glm::mat4(1.0f), patrick, 0, 0);
+    enTity3.worldMatrix = TransformPositionScale(vec3(-2.0, 0.0, 5.0), vec3(0.45f));
+    app->enTities.push_back(enTity3);
+
+    app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_PATRICIO");
     Program& textureGeometryProgram = app->programs[app->texturedGeometryProgramIdx];
     app->textureMeshProgram_uTexture = glGetUniformLocation(textureGeometryProgram.handle, "uTexture");
 
-    int attributeCount;
-    char attributeName[128];
-    int attributeNameLenght;
-    int attributeSize;
-    GLenum attributeType;
-
-    int attributeLocation;
-
-    glGetProgramiv(textureGeometryProgram.handle, GL_ACTIVE_ATTRIBUTES, &attributeCount);
-
-    for (int i = 0; i <= attributeCount; ++i)
-    {
-        glGetActiveAttrib(textureGeometryProgram.handle, i, 
-            ARRAY_COUNT(attributeName), 
-            &attributeNameLenght, 
-            &attributeSize, 
-            &attributeType, 
-            attributeName);
-
-        attributeLocation = glGetAttribLocation(textureGeometryProgram.handle, attributeName);
-
-        u8 realCount = 0;
-
-        switch (attributeType)
-        {
-        case GL_FLOAT:
-            realCount = 1;
-            break;
-        case GL_FLOAT_VEC2:
-            realCount = 2;
-            break;
-        case GL_FLOAT_VEC3:
-            realCount = 3;
-            break;
-        default:
-            realCount = 1;
-            break;
-        }
-
-        textureGeometryProgram.vertexInputLayout.attributes.push_back({ (u8)attributeLocation , realCount});
-    }
-
     app->mode = Mode_TextureMesh;
-}
-
-mat4 TransformScale(const vec3& scaleFactors)
-{
-    mat4 transform = glm::scale(scaleFactors);
-    return transform;
-}
-
-mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
-{
-    mat4 transform = glm::translate(pos);
-    transform = glm::scale(transform, scaleFactors);
-    return transform;
 }
 
 void Init(App* app)
@@ -317,16 +330,6 @@ void Init(App* app)
     // - textures
 
     //Geometry
-
-    InitalizeTextureMesh(app);
-
-    app->camera.pos = glm::vec3(0.0f);
-    app->camera.target =  glm::vec3(0.0f);
-    app->camera.aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
-
-    app->projection = glm::perspective(glm::radians(60.0f), app->camera.aspectRatio, app->camera.zNear, app->camera.zFar);
-    app->view = glm::lookAt(vec3(2.0f,-2.0f,3.0f), vec3(0.0f), vec3(0.0f, 1.0f, 0.0f));
-
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
 
@@ -334,6 +337,14 @@ void Init(App* app)
     glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
     glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    InitalizeTextureMesh(app);
+
+    app->camera.pos = glm::vec3(0.0f, 3.0f, 12.0f);
+    app->camera.angles = glm::vec3(0.0f);
+    app->camera.target =  glm::vec3(0.0f);
+    app->camera.aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
+
 }
 
 void Gui(App* app)
@@ -341,11 +352,48 @@ void Gui(App* app)
     static bool demoOpen = false;
     static bool engineInfoOpen = true;
 
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("Control Panel")) {
+            if (ImGui::MenuItem("Control Panel", NULL, engineInfoOpen)) {
+                engineInfoOpen = !engineInfoOpen;
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+
+
     if (engineInfoOpen)
     {
-        if (ImGui::Begin("Info", &engineInfoOpen)) {
+        if (ImGui::Begin("Control Panel", &engineInfoOpen)) {
 
-            ImGui::Text("FPS: %f", 1.0f / app->deltaTime);
+            if (ImGui::CollapsingHeader("Info", ImGuiTreeNodeFlags_CollapsingHeader))
+            {
+                ImGui::Text("FPS: %f", 1.0f / app->deltaTime);
+                ImGui::Text("GPU: %s", glGetString(GL_RENDERER));
+                ImGui::Text("OpenGL Version: %s", glGetString(GL_VERSION));
+                ImGui::Text("Mouse Pos:");
+                ImGui::SameLine();
+                ImGui::Text("%f,%f", app->input.mousePos.x, app->input.mousePos.y);
+            }
+
+            if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_CollapsingHeader))
+            {
+                vec3 translate = app->camera.pos;
+
+                if (ImGui::DragFloat3("Position", (float*)&translate, 0.1f))
+                {
+                    app->view = glm::translate(translate);
+                    app->camera.pos = translate;
+                }
+                if (ImGui::DragFloat3("Rotation", (float*)&app->camera.angles, 0.1f))
+                {
+
+                }
+
+            }
+
             ImGui::End();
         }
     }
@@ -356,10 +404,47 @@ void Gui(App* app)
  
 }
 
+u32 Align(u32 value, u32 aligment)
+{
+    return (value + aligment - 1) & ~(aligment - 1);
+}
+
+
 void Update(App* app)
 {
     // You can handle app->input keyboard/mouse here
 
+    app->projection = glm::perspective(glm::radians(60.0f), app->camera.aspectRatio, app->camera.zNear, app->camera.zFar);
+    app->view = glm::lookAt(app->camera.pos, app->camera.target, vec3(0.0f, 1.0f, 0.0f));
+
+    //app->enTities[1].worldMatrix = glm::rotate(app->enTities[1].worldMatrix, glm::radians(app->time), glm::vec3(0.0f, 1.0f, 0.0f));
+    //app->time += 1.0f;
+
+    //Uniforms
+    glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
+    u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+    u32 bufferHead = 0;
+
+    for (int j = 0; j < app->enTities.size(); ++j)
+    {
+        //World == Model   MVP(Model, view, projection)
+        app->worldViewProjection = app->projection * app->view * app->enTities[j].worldMatrix;
+
+        bufferHead = Align(bufferHead, app->uniformBlockAlignment);
+
+        app->enTities[j].localParamsOffset = bufferHead;
+
+        memcpy(bufferData + bufferHead, glm::value_ptr(app->enTities[j].worldMatrix), sizeof(glm::mat4));
+        bufferHead += sizeof(glm::mat4);
+
+        memcpy(bufferData + bufferHead, glm::value_ptr(app->worldViewProjection), sizeof(glm::mat4));
+        bufferHead += sizeof(glm::mat4);
+
+        app->enTities[j].localParamsSize = bufferHead - app->enTities[j].localParamsOffset;
+    }
+
+    glUnmapBuffer(GL_UNIFORM_BUFFER);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
@@ -455,32 +540,6 @@ void Render(App* app)
 
         case Mode_TextureMesh:
             {
-                //World == Model   MVP(Model, view, projection)
-                mat4 world = TransformPositionScale(vec3(0.0f, 1.0f, 0.0f), vec3(0.45f));
-                world = glm::rotate(world, glm::radians(app->time), glm::vec3(0.0f, 1.0f, 0.0f));
-                app->time += 1.0f;
-
-                app->worldViewProjection = app->projection * app->view * world;
-                /*int mvpLoc = glGetUniformLocation(app->programs[app->texturedGeometryProgramIdx].handle, "uWorldViewProjectionMatrix");
-                glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, glm::value_ptr(app->worldViewProjection));*/
-
-                //Uniforms
-                glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
-                u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-                u32 bufferHead = 0;
-                memcpy(bufferData + bufferHead, glm::value_ptr(world), sizeof(glm::mat4));
-                bufferHead += sizeof(glm::mat4);
-
-                memcpy(bufferData + bufferHead, glm::value_ptr(app->worldViewProjection), sizeof(glm::mat4));
-                bufferHead += sizeof(glm::mat4);
-
-                glUnmapBuffer(GL_UNIFORM_BUFFER);
-                glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-                u32 blockOffset = 0;
-                u32 blockSize = sizeof(glm::mat4) * 2;
-                glBindBufferRange(GL_UNIFORM_BUFFER, 1, app->bufferHandle, blockOffset, blockSize);
-
 
                 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -492,23 +551,30 @@ void Render(App* app)
                 Program& textureMeshProgram = app->programs[app->texturedGeometryProgramIdx];
                 glUseProgram(textureMeshProgram.handle);
 
-                Model& model = app->models[app->patricio];
-                Mesh& mesh = app->meshes[model.meshIdx];
-
-                for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                for (int j = 0; j < app->enTities.size(); ++j)
                 {
-                    GLuint vao = FindVAO(mesh, i, textureMeshProgram);
-                    glBindVertexArray(vao);
+                    Model& model = app->models[app->enTities[j].modelIdx];
+                    Mesh& mesh = app->meshes[model.meshIdx];
 
-                    u32 submeshMaterialIdx = model.materialIdx[i];
-                    Material& submeshMaterial = app->materials[submeshMaterialIdx];
+                    u32 blockOffset = app->enTities[j].localParamsOffset;
+                    u32 blockSize = app->enTities[j].localParamsSize;
+                    glBindBufferRange(GL_UNIFORM_BUFFER, 1, app->bufferHandle, blockOffset, blockSize);
 
-                    glActiveTexture(GL_TEXTURE);
-                    glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
-                    glUniform1i(app->textureMeshProgram_uTexture, 0);
+                    for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+                    {
+                        GLuint vao = FindVAO(mesh, i, textureMeshProgram);
+                        glBindVertexArray(vao);
 
-                    Submesh& submesh = mesh.submeshes[i];
-                    glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                        u32 submeshMaterialIdx = model.materialIdx[i];
+                        Material& submeshMaterial = app->materials[submeshMaterialIdx];
+
+                        glActiveTexture(GL_TEXTURE);
+                        glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+                        glUniform1i(app->textureMeshProgram_uTexture, 0);
+
+                        Submesh& submesh = mesh.submeshes[i];
+                        glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+                    }
                 }
                 
             }
@@ -523,4 +589,3 @@ void Render(App* app)
         default:;
     }
 }
-

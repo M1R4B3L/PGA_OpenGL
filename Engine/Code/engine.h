@@ -135,9 +135,40 @@ struct Material
     u32 bumpTextureIdx;
 };
 
+struct Entity
+{
+    glm::mat4 worldMatrix;
+    u32 modelIdx;
+    u32 localParamsOffset;
+    u32 localParamsSize;
+    
+    Entity(mat4 _worldMatrix, u32 _modelIdx, u32 _localParamsOffset,u32 _localParamsSize)
+    {
+        worldMatrix = _worldMatrix;
+        modelIdx = _modelIdx;
+        localParamsOffset = _localParamsOffset;
+        localParamsSize = _localParamsSize;
+    };
+};
+
+enum class LightType
+{
+    Dirrectional,
+    Point
+};
+
+struct Light
+{
+    LightType type;
+    vec3 col;
+    vec3 dir;
+    vec3 pos;
+};
+
 struct Camera
 {
     vec3 pos;
+    vec3 angles;
     vec3 target;
     f32  aspectRatio;
     f32  zNear = 0.01f;
@@ -174,6 +205,8 @@ struct App
     std::vector<Model>  models;
     std::vector<Program>  programs;
 
+    std::vector<Entity> enTities;
+
     // program indices
     u32 texturedGeometryProgramIdx;
     
@@ -183,9 +216,6 @@ struct App
     u32 blackTexIdx;
     u32 normalTexIdx;
     u32 magentaTexIdx;
-
-    //Model
-    u32 patricio;
 
     //Texture
     u32 textureMeshProgram_uTexture;
