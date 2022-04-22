@@ -172,6 +172,7 @@ struct Light
     vec3 dir;
     vec3 pos;
     LightType type;
+    float range;
 };
 
 struct Camera

@@ -350,9 +350,10 @@ void Init(App* app)
 
     Light light;
     light.pos = vec3(0.0f,0.0f,2.0f);
-    light.dir = vec3(1.0f);
+    light.dir = vec3(-1.0f);
     light.type = LightType::Point;
-    light.col = vec3(0.0f);
+    light.col = vec3(1.0f);
+    light.range = 2.0f;
 
     app->lights.push_back(light);
 }
@@ -440,10 +441,11 @@ void Update(App* app)
         AlignHead(app->cBuffer, sizeof(vec4));
 
         Light& light = app->lights[i];
-        PushUInt(app->cBuffer, (u32)light.type);
         PushVec3(app->cBuffer, light.col);
         PushVec3(app->cBuffer, light.dir);
         PushVec3(app->cBuffer, light.pos);
+        PushUInt(app->cBuffer, (u32)light.type);
+        PushFloat(app->cBuffer, light.range);
     }
     app->gloabalParamsSize = app->cBuffer.head - app->gloabalParamsOffset;
 
@@ -570,14 +572,15 @@ void Render(App* app)
                 Program& textureMeshProgram = app->programs[app->texturedGeometryProgramIdx];
                 glUseProgram(textureMeshProgram.handle);
 
+                glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->cBuffer.handle, app->gloabalParamsOffset, app->gloabalParamsSize);
+
                 for (int j = 0; j < app->enTities.size(); ++j)
                 {
                     Model& model = app->models[app->enTities[j].modelIdx];
                     Mesh& mesh = app->meshes[model.meshIdx];
 
-                    //Falta Render de les lights (Es una entity???)
-                    u32 blockOffset = app->enTities[j].localParamsOffset + app->gloabalParamsOffset;
-                    u32 blockSize = app->enTities[j].localParamsSize + app->gloabalParamsSize;
+                    u32 blockOffset = app->enTities[j].localParamsOffset;
+                    u32 blockSize = app->enTities[j].localParamsSize;
 
                     glBindBufferRange(GL_UNIFORM_BUFFER, 1, app->cBuffer.handle, blockOffset, blockSize);
 

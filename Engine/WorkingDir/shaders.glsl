@@ -54,6 +54,7 @@ struct Light
     vec3 dir;
     vec3 pos;
     unsigned int type;
+	float range;
 };
 
 layout(location=0) in vec3 aPosition;
@@ -79,6 +80,8 @@ out vec2 vTexCoord;
 out vec3 vPosition;
 out vec3 vNormal;
 out vec3 vViewDir;
+out vec3 vLightDir;
+out vec3 vLightColor;
 
 void main()
 {
@@ -86,6 +89,8 @@ void main()
 	vPosition	= vec3(uWorldMatrix * vec4(aPosition, 1.0));
 	vNormal		= vec3(uWorldMatrix * vec4(aNormal, 0.0));
 	vViewDir	= uCameraPosition - vPosition;
+	vLightDir	= uLight[0].dir;
+	vLightColor	= uLight[0].col;
 	gl_Position = uWorldViewProjectionMatrix * vec4(aPosition,1.0);
 }
 
@@ -97,6 +102,8 @@ in vec2 vTexCoord;
 in vec3 vPosition;
 in vec3 vNormal;
 in vec3 vViewDir;
+in vec3 vLightDir;
+in vec3 vLightColor;
 
 uniform sampler2D uTexture;
 
@@ -105,6 +112,7 @@ layout(location=0) out vec4 oColor;
 void main()
 {
 	oColor = texture(uTexture, vTexCoord);
+	oColor +=  vec4(vLightColor * dot(vNormal, vLightDir),1.0);
 }
 
 #endif
