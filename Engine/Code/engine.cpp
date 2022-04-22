@@ -7,6 +7,7 @@
 
 #include "engine.h"
 #include "assimp_model_loading.h"
+#include "buffer_management.h"
 #include <imgui.h>
 #include <stb_image.h>
 #include <stb_image_write.h>
@@ -333,8 +334,8 @@ void Init(App* app)
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
 
-    glGenBuffers(1, &app->bufferHandle);
-    glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
+    glGenBuffers(1, &app->cBuffer.handle);
+    glBindBuffer(GL_UNIFORM_BUFFER, app->cBuffer.handle);
     glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
@@ -345,6 +346,15 @@ void Init(App* app)
     app->camera.target =  glm::vec3(0.0f);
     app->camera.aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
 
+    // Lights
+
+    Light light;
+    light.pos = vec3(0.0f,0.0f,2.0f);
+    light.dir = vec3(1.0f);
+    light.type = LightType::Point;
+    light.col = vec3(0.0f);
+
+    app->lights.push_back(light);
 }
 
 void Gui(App* app)
@@ -404,12 +414,6 @@ void Gui(App* app)
  
 }
 
-u32 Align(u32 value, u32 aligment)
-{
-    return (value + aligment - 1) & ~(aligment - 1);
-}
-
-
 void Update(App* app)
 {
     // You can handle app->input keyboard/mouse here
@@ -421,26 +425,41 @@ void Update(App* app)
     //app->time += 1.0f;
 
     //Uniforms
-    glBindBuffer(GL_UNIFORM_BUFFER, app->bufferHandle);
-    u8* bufferData = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-    u32 bufferHead = 0;
+    glBindBuffer(GL_UNIFORM_BUFFER, app->cBuffer.handle);
+    app->cBuffer.data = (u8*)glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+    app->cBuffer.head = 0;
 
-    for (int j = 0; j < app->enTities.size(); ++j)
+    //Global Params
+    app->gloabalParamsOffset = app->cBuffer.head;
+
+    PushVec3(app->cBuffer, app->camera.pos);
+    PushUInt(app->cBuffer, app->lights.size());
+
+    for (u32 i = 0; i < app->lights.size(); ++i)
     {
-        //World == Model   MVP(Model, view, projection)
-        app->worldViewProjection = app->projection * app->view * app->enTities[j].worldMatrix;
+        AlignHead(app->cBuffer, sizeof(vec4));
 
-        bufferHead = Align(bufferHead, app->uniformBlockAlignment);
+        Light& light = app->lights[i];
+        PushUInt(app->cBuffer, (u32)light.type);
+        PushVec3(app->cBuffer, light.col);
+        PushVec3(app->cBuffer, light.dir);
+        PushVec3(app->cBuffer, light.pos);
+    }
+    app->gloabalParamsSize = app->cBuffer.head - app->gloabalParamsOffset;
 
-        app->enTities[j].localParamsOffset = bufferHead;
+    //Local Params
+    for (u32 i = 0; i < app->enTities.size(); ++i)
+    {
+        AlignHead(app->cBuffer, app->uniformBlockAlignment);
 
-        memcpy(bufferData + bufferHead, glm::value_ptr(app->enTities[j].worldMatrix), sizeof(glm::mat4));
-        bufferHead += sizeof(glm::mat4);
+        Entity& entity = app->enTities[i];
+        mat4    world = entity.worldMatrix;
+        mat4    worldViewProjection = app->projection * app->view * world;
 
-        memcpy(bufferData + bufferHead, glm::value_ptr(app->worldViewProjection), sizeof(glm::mat4));
-        bufferHead += sizeof(glm::mat4);
-
-        app->enTities[j].localParamsSize = bufferHead - app->enTities[j].localParamsOffset;
+        entity.localParamsOffset = app->cBuffer.head;
+        PushMat4(app->cBuffer, world);
+        PushMat4(app->cBuffer, worldViewProjection);
+        entity.localParamsSize = app->cBuffer.head - entity.localParamsOffset;
     }
 
     glUnmapBuffer(GL_UNIFORM_BUFFER);
@@ -556,9 +575,11 @@ void Render(App* app)
                     Model& model = app->models[app->enTities[j].modelIdx];
                     Mesh& mesh = app->meshes[model.meshIdx];
 
-                    u32 blockOffset = app->enTities[j].localParamsOffset;
-                    u32 blockSize = app->enTities[j].localParamsSize;
-                    glBindBufferRange(GL_UNIFORM_BUFFER, 1, app->bufferHandle, blockOffset, blockSize);
+                    //Falta Render de les lights (Es una entity???)
+                    u32 blockOffset = app->enTities[j].localParamsOffset + app->gloabalParamsOffset;
+                    u32 blockSize = app->enTities[j].localParamsSize + app->gloabalParamsSize;
+
+                    glBindBufferRange(GL_UNIFORM_BUFFER, 1, app->cBuffer.handle, blockOffset, blockSize);
 
                     for (u32 i = 0; i < mesh.submeshes.size(); ++i)
                     {

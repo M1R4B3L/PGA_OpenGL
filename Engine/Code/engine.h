@@ -76,6 +76,15 @@ enum Mode
     Mode_Count
 };
 
+struct Buffer
+{
+    GLuint handle;
+    GLenum type;
+    u32	   size;
+    u32	   head;
+    void* data;
+};
+
 struct OpenGLInfo
 {
 
@@ -153,16 +162,16 @@ struct Entity
 
 enum class LightType
 {
-    Dirrectional,
+    Directional,
     Point
 };
 
 struct Light
 {
-    LightType type;
     vec3 col;
     vec3 dir;
     vec3 pos;
+    LightType type;
 };
 
 struct Camera
@@ -192,6 +201,9 @@ struct App
     mat4 projection;
     mat4 view;
     mat4 worldViewProjection;
+
+    // Lights
+    std::vector<Light> lights;
 
     // Graphics
     char gpuName[64];
@@ -238,6 +250,12 @@ struct App
     i32 maxUniformBufferSize;
     i32 uniformBlockAlignment;
     u32 bufferHandle;
+
+    // Buffer
+    Buffer cBuffer;  //Constant Buffer
+
+    int gloabalParamsOffset;
+    int gloabalParamsSize;
 };
 
 void Init(App* app);
