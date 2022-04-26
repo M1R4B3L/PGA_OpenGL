@@ -370,7 +370,7 @@ void Init(App* app)
     light.pos = vec3(0.0f,0.0f,0.0f);
     light.type = LightType::Point;
     light.col = vec3(1.0f,1.0f,1.0f);
-    light.range = 20.0f;
+    light.range = 200.0f;
     light.dir = GetAttenuation(light.range);
     app->lights.push_back(light);
 }
@@ -418,6 +418,15 @@ void Gui(App* app)
                 if (ImGui::DragFloat3("Rotation", (float*)&app->camera.angles, 0.1f))
                 {
 
+                }
+
+            }
+            if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_CollapsingHeader))
+            {
+                vec3 ligthPos = app->lights[0].pos;
+                if (ImGui::DragFloat3("Position Light", (float*)&ligthPos, 0.1f))
+                {
+                    app->lights[0].pos = ligthPos;
                 }
 
             }
