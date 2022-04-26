@@ -80,8 +80,6 @@ out vec2 vTexCoord;
 out vec3 vPosition;
 out vec3 vNormal;
 out vec3 vViewDir;
-out vec3 vLightDir;
-out vec3 vLightColor;
 
 void main()
 {
@@ -89,8 +87,6 @@ void main()
 	vPosition	= vec3(uWorldMatrix * vec4(aPosition, 1.0));
 	vNormal		= vec3(uWorldMatrix * vec4(aNormal, 0.0));
 	vViewDir	= uCameraPosition - vPosition;
-	vLightDir	= uLight[0].dir;
-	vLightColor	= uLight[0].col;
 	gl_Position = uWorldViewProjectionMatrix * vec4(aPosition,1.0);
 }
 
@@ -98,21 +94,54 @@ void main()
 
 // TODO: Write your fragment shader here
 
+struct Light
+{
+    vec3 col;
+    vec3 dir;
+    vec3 pos;
+    unsigned int type;
+	float range;
+};
+
 in vec2 vTexCoord;
 in vec3 vPosition;
 in vec3 vNormal;
 in vec3 vViewDir;
-in vec3 vLightDir;
-in vec3 vLightColor;
 
 uniform sampler2D uTexture;
+
+layout(binding = 0, std140) uniform GlobalParams
+{
+	vec3		 uCameraPosition;
+	unsigned int uLightCount;
+	Light		 uLight[16];
+};
+
 
 layout(location=0) out vec4 oColor;
 
 void main()
 {
 	oColor = texture(uTexture, vTexCoord);
-	oColor +=  vec4(vLightColor * dot(vNormal, vLightDir),1.0);
+
+	for(int i = 0; i < uLightCount; ++i) {
+
+		Light currentLight = uLight[i];
+	
+		if(currentLight.type == 0)
+		{
+			oColor +=  vec4(currentLight.col * dot(vNormal, normalize(currentLight.dir)),1.0);
+		}
+		else if(currentLight.type == 1)
+		{
+			float distance = length(currentLight.pos - vPosition);
+			vec3  ldir = normalize(currentLight.pos - vPosition);
+			float attenuation = 1.0 / (currentLight.dir.x + currentLight.dir.y * distance + currentLight.dir.z * (distance * distance));
+			float intensity = dot(vNormal, ldir) * attenuation;
+			oColor +=  vec4(currentLight.col * intensity ,1.0);
+		}
+	}
+
 }
 
 #endif

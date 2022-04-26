@@ -223,6 +223,24 @@ u32 LoadTexture2D(App* app, const char* filepath)
     }
 }
 
+constexpr vec3 GetAttenuation(u32 range)
+{
+    float constant = 1.0;
+    if(range <= 7)      { return vec3(constant,0.7,    1.8); }
+    if(range <= 13)     { return vec3(constant,0.35,   0.44); }
+    if(range <= 20)     { return vec3(constant,0.22,   0.20); }
+    if(range <= 32)     { return vec3(constant,0.14,   0.07); }
+    if(range <= 50)     { return vec3(constant,0.09,   0.032); }
+    if(range <= 65)     { return vec3(constant,0.07,   0.017); }
+    if(range <= 100)    { return vec3(constant,0.045,  0.0075); }
+    if(range <= 160)    { return vec3(constant,0.027,  0.0028); }
+    if(range <= 200)    { return vec3(constant,0.022,  0.0019); }
+    if(range <= 325)    { return vec3(constant,0.014,  0.0007); }
+    if(range <= 600)    { return vec3(constant,0.007,  0.0002); }
+    if(range <= 3250)   { return vec3(constant,0.0014, 0.000007); }
+
+}
+
 mat4 TransformScale(const vec3& scaleFactors)
 {
     mat4 transform = glm::scale(scaleFactors);
@@ -349,12 +367,11 @@ void Init(App* app)
     // Lights
 
     Light light;
-    light.pos = vec3(0.0f,0.0f,2.0f);
-    light.dir = vec3(-1.0f);
+    light.pos = vec3(0.0f,0.0f,0.0f);
     light.type = LightType::Point;
-    light.col = vec3(1.0f);
-    light.range = 2.0f;
-
+    light.col = vec3(1.0f,1.0f,1.0f);
+    light.range = 20.0f;
+    light.dir = GetAttenuation(light.range);
     app->lights.push_back(light);
 }
 

@@ -172,7 +172,7 @@ struct Light
     vec3 dir;
     vec3 pos;
     LightType type;
-    float range;
+    u32 range;
 };
 
 struct Camera
@@ -201,7 +201,6 @@ struct App
 
     mat4 projection;
     mat4 view;
-    mat4 worldViewProjection;
 
     // Lights
     std::vector<Light> lights;
@@ -270,3 +269,5 @@ GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program);
 void Render(App* app);
 
 u32 LoadTexture2D(App* app, const char* filepath);
+
+constexpr vec3 GetAttenuation(u32 range);
