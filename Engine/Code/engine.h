@@ -89,23 +89,6 @@ struct OpenGLInfo
 {
 
 };
-//VAO
-struct VertexV3V2 {
-    vec3 pos;
-    vec2 uv;
-};
-
-const VertexV3V2 vertices[] = {
-    { {-0.5,-0.5,0.0}, {0.0,0.0} },
-    { { 0.5,-0.5,0.0}, {1.0,0.0} },
-    { { 0.5, 0.5,0.0}, {1.0,1.0} },
-    { {-0.5, 0.5,0.0}, {0.0,1.0} },
-};
-
-const u16 indices[] = {
-    0,1,2,
-    0,2,3
-};
 
 //Models & Materials
 struct Model
@@ -163,7 +146,8 @@ struct Entity
 enum class LightType
 {
     Directional,
-    Point
+    Point,
+    Spot
 };
 
 struct Light
@@ -271,3 +255,5 @@ void Render(App* app);
 u32 LoadTexture2D(App* app, const char* filepath);
 
 constexpr vec3 GetAttenuation(u32 range);
+
+void CreateQuat();

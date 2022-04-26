@@ -255,36 +255,43 @@ mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
 }
 
 void InitializeTextureQuad(App* app)
-{
-    
-    app->meshes.push_back(Mesh{});
-    Mesh& mesh = app->meshes.back();
-    u32 meshIdx = (u32)app->meshes.size() - 1u;
-
-    f32 vertices[] = { -0.5,-0.5, 0.0, 0.0, 0.0,
+{  
+    f32 vertices[] = {  0.5, 0.5, 0.0, 1.0, 1.0,
                         0.5,-0.5, 0.0, 1.0, 0.0,
-                        0.5, 0.5, 0.0, 1.0, 1.0,
+                       -0.5,-0.5, 0.0, 0.0, 0.0,
                        -0.5, 0.5, 0.0, 0.0, 1.0 };
 
-    u16 indices[] = { 0, 1, 2, 
+    u16 indices[] = { 0, 1, 2,
                       0, 2, 3 };
+
+    std::vector<float> vertices2;
+    std::vector<float> indices2;
+
+    for(int i = 0; i < 20; ++i)
+        vertices2.push_back(vertices[i]);
+
+    for (int i = 0; i < 6; ++i)
+        indices2.push_back(indices[i]);
+
+    int stride = 0;
 
     VertexBufferLayout vertexBufferLayout = {};
     vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
-    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 1, 2, 3 * sizeof(float) });
+    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 1, 2, sizeof(float)*3 });
     vertexBufferLayout.stride = 5 * sizeof(float);
 
-    Submesh submesh = {};
+    Submesh submesh;
     submesh.vertexBufferLayout = vertexBufferLayout;
-    i32 sizeVert = sizeof(vertices) / sizeof(vertices[0]);
-    copy(vertices, vertices + sizeVert, submesh.vertices.begin());
-    i32 sizeInd = sizeof(indices) / sizeof(indices[0]);
-    copy(indices, indices + sizeInd, submesh.indices.begin());
+    submesh.vertices.swap(vertices2);
+    submesh.vertices.swap(indices2);
 
-    (&mesh)->submeshes.push_back(submesh);
+    app->meshes.push_back(Mesh{});
+    Mesh& mesh = app->meshes.back();
 
-    glGenBuffers(1, &mesh.vertexBufferHandle);
-    glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
+    mesh.submeshes.push_back(submesh);
+
+    glGenBuffers(1, &app->embeddedVertices);
+    glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -296,9 +303,10 @@ void InitializeTextureQuad(App* app)
     glGenVertexArrays(1, &app->vao);
     glBindVertexArray(app->vao);
     glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(f32)*5, (void*)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexV3V2), (void*)12);
+
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(f32)*5, (void*)12);
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedElements);
     glBindVertexArray(0);
@@ -357,7 +365,7 @@ void Init(App* app)
     glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-    InitalizeTextureMesh(app);
+    InitializeTextureQuad(app);
 
     app->camera.pos = glm::vec3(0.0f, 3.0f, 12.0f);
     app->camera.angles = glm::vec3(0.0f);

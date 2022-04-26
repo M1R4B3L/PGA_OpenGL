@@ -127,19 +127,37 @@ void main()
 	for(int i = 0; i < uLightCount; ++i) {
 
 		Light currentLight = uLight[i];
+		float distance = length(currentLight.pos - vPosition);
+		vec3  lDir = normalize(currentLight.pos - vPosition);
+		float intensity;
 	
-		if(currentLight.type == 0)
+		if(currentLight.type == 0) 
 		{
-			oColor +=  vec4(currentLight.col * dot(vNormal, normalize(currentLight.dir)),1.0);
+			intensity = dot(vNormal, currentLight.dir);
+			oColor += vec4(currentLight.col * intensity, 1.0);
 		}
 		else if(currentLight.type == 1)
 		{
-			float distance = length(currentLight.pos - vPosition);
-			vec3  ldir = normalize(currentLight.pos - vPosition);
-			float attenuation = 1.0 / (currentLight.dir.x + currentLight.dir.y * distance + currentLight.dir.z * (distance * distance));
-			float intensity = dot(vNormal, ldir) * attenuation;
-			oColor +=  vec4(currentLight.col * intensity ,1.0);
+			float cons = currentLight.dir.x;
+			float linear = currentLight.dir.y;
+			float quadratic = currentLight.dir.z;
+			float attenuation = 1.0 / (cons + linear * distance + quadratic * (distance * distance));
+			intensity = dot(vNormal, lDir) * attenuation;
+			oColor += vec4(currentLight.col * intensity, 1.0);
 		}
+		else if(currentLight.type == 2)
+		{
+			float cutOff = cos(radians(20.0));
+			float theta = dot(lDir,normalize(currentLight.dir));
+
+			if(theta > cutOff)
+			{
+				float attenuation = 1.0 - (1.0 - theta) / (1.0 - cutOff);
+				intensity = dot(vNormal, lDir) * attenuation;
+				oColor += vec4(currentLight.col * intensity, 1.0);
+			}
+		}
+
 	}
 
 }
