@@ -240,6 +240,13 @@ struct App
 
     int gloabalParamsOffset;
     int gloabalParamsSize;
+
+    // Framebruffers
+    u32 colorAttachmentHandle;
+    u32 normalAttachmentHandle;
+    u32 depthAttachmentHandle;
+
+    u32 framebufferHandle;
 };
 
 void Init(App* app);

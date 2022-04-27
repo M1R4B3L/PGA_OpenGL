@@ -324,7 +324,7 @@ void InitializeTextureQuad(App* app)
     app->mode = Mode_TexturedQuad;
 }
 
-void InitalizeTextureMesh(App* app)
+void InitializeTextureMesh(App* app)
 {
     u32 patrick = LoadModel(app, "Patrick/Patrick.obj");
 
@@ -347,6 +347,70 @@ void InitalizeTextureMesh(App* app)
     app->mode = Mode_TextureMesh;
 }
 
+void InitializeFrameBuffers(App* app)
+{
+    //Create Textures
+    glGenTextures(1, &app->colorAttachmentHandle);
+    glBindTexture(GL_TEXTURE_2D, app->colorAttachmentHandle);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);    //Time / Repeticion para texturas animadas
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);    //U
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);    //V
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glGenTextures(1, &app->normalAttachmentHandle);
+    glBindTexture(GL_TEXTURE_2D, app->normalAttachmentHandle);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);    
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);    
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);    
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glGenTextures(1, &app->depthAttachmentHandle);
+    glBindTexture(GL_TEXTURE_2D, app->depthAttachmentHandle);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    app->framebufferHandle;
+    glGenFramebuffers(1, &app->framebufferHandle);
+    glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, app->colorAttachmentHandle, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, app->depthAttachmentHandle, 0);
+
+    GLenum framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE)
+    {
+
+        switch (framebufferStatus)
+        {
+            case GL_FRAMEBUFFER_UNDEFINED:                      ELOG("GL_FRAMEBUFFER_UNDEFINED"); break;
+            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:          ELOG("GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT"); break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:  ELOG("GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT"); break;
+            case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:         ELOG("GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER"); break;
+            case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:         ELOG("GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER"); break;
+            case GL_FRAMEBUFFER_UNSUPPORTED:                    ELOG("GL_FRAMEBUFFER_UNSUPPORTED"); break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:         ELOG("GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE"); break;
+            case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:       ELOG("GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE"); break;
+            default:                                            ELOG("UNKNOWN FRAMEBUFFER ERROR"); break;
+        }
+    }
+
+    u32 drawBuffers[] = { app->colorAttachmentHandle };
+    glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+}
+
 void Init(App* app)
 {
     // TODO: Initialize your resources here!
@@ -366,6 +430,9 @@ void Init(App* app)
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     InitializeTextureQuad(app);
+    InitializeTextureMesh(app);
+
+    InitializeFrameBuffers(app);
 
     app->camera.pos = glm::vec3(0.0f, 3.0f, 12.0f);
     app->camera.angles = glm::vec3(0.0f);
@@ -376,15 +443,44 @@ void Init(App* app)
 
     Light light;
     light.pos = vec3(0.0f,0.0f,0.0f);
-    light.type = LightType::Point;
-    light.col = vec3(1.0f,1.0f,1.0f);
+    light.type = LightType::Spot;
+    light.col = vec3(1.0f,1.0f,0.0f);
     light.range = 200.0f;
     light.dir = GetAttenuation(light.range);
     app->lights.push_back(light);
 }
 
+void Docking()
+{
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar;
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->Pos);
+    ImGui::SetNextWindowSize(viewport->Size);
+    ImGui::SetNextWindowViewport(viewport->ID);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+    window_flags |= ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoBackground;
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+    static bool docking = true;
+
+    if (ImGui::Begin("DockSpace", &docking, window_flags)) {
+        // DockSpace
+        ImGui::PopStyleVar(3);
+        if (docking)
+        {
+            ImGuiID dockspace_id = ImGui::GetID("DockSpace");
+            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+        }
+
+        ImGui::End();
+    }
+}
+
 void Gui(App* app)
 {
+    Docking();
     static bool demoOpen = false;
     static bool engineInfoOpen = true;
 
@@ -596,6 +692,8 @@ void Render(App* app)
         case Mode_TextureMesh:
             {
 
+                glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
+
                 glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -634,7 +732,28 @@ void Render(App* app)
                         glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                     }
                 }
-                
+
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+                glBindVertexArray(0);
+                glUseProgram(0);
+
+                glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+                glUseProgram(app->programs[app->texturedGeometryProgramIdx].handle);
+                glBindVertexArray(app->vao);
+
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                glUniform1i(app->programUniformTexture, 0);
+                glActiveTexture(GL_TEXTURE);
+                glBindTexture(GL_TEXTURE_2D, app->colorAttachmentHandle);
+
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+
+                glBindVertexArray(0);
+                glUseProgram(0);
             }
             break;
 
@@ -647,3 +766,4 @@ void Render(App* app)
         default:;
     }
 }
+
