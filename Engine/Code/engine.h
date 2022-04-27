@@ -204,6 +204,7 @@ struct App
     std::vector<Entity> enTities;
 
     // program indices
+    u32 texturedQuadProgramIdx;              // Location of the texture uniform in the textured quad shader
     u32 texturedGeometryProgramIdx;
     
     // texture indices
@@ -215,6 +216,7 @@ struct App
 
     //Texture
     u32 textureMeshProgram_uTexture;
+    u32 textureQuadProgram_uTexture;
 
     // Mode
     Mode mode;
@@ -223,9 +225,6 @@ struct App
     // a screen filling quad, a cube, a sphere...)
     GLuint embeddedVertices;
     GLuint embeddedElements;
-
-    // Location of the texture uniform in the textured quad shader
-    GLuint programUniformTexture;
 
     // VAO object to link our screen filling quad with our textured quad shader
     GLuint vao;
@@ -244,6 +243,8 @@ struct App
     // Framebruffers
     u32 colorAttachmentHandle;
     u32 normalAttachmentHandle;
+    u32 albedoAttachmentHandle;
+    u32 depthColorAttachmentHandle;
     u32 depthAttachmentHandle;
 
     u32 framebufferHandle;

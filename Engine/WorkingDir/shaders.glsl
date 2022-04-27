@@ -117,12 +117,26 @@ layout(binding = 0, std140) uniform GlobalParams
 	Light		 uLight[16];
 };
 
-
 layout(location=0) out vec4 oColor;
+layout(location=1) out vec4 nColor;
+layout(location=2) out vec4 albedoColor;
+layout(location=3) out vec4 depthColor;
+
+float near = 0.1; 
+float far  = 100.0; 
+  
+float LinearizeDepth(float depth) 
+{
+    float z = depth * 2.0 - 1.0; 
+    return (2.0 * near * far) / (far + near - z * (far - near));	
+}
 
 void main()
 {
 	oColor = texture(uTexture, vTexCoord);
+	nColor = vec4(vNormal,1.0);
+	albedoColor = oColor;
+	depthColor = vec4(vec3(LinearizeDepth(gl_FragCoord.z) / far),1.0);
 
 	for(int i = 0; i < uLightCount; ++i) {
 
