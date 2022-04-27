@@ -241,6 +241,7 @@ struct App
     int gloabalParamsSize;
 
     // Framebruffers
+    u32 currentAttachmentHandle;
     u32 colorAttachmentHandle;
     u32 normalAttachmentHandle;
     u32 albedoAttachmentHandle;

@@ -347,7 +347,7 @@ void InitializeTextureMesh(App* app)
     app->mode = Mode_TextureMesh;
 }
 
-void InitializeFrameBuffers(App* app)
+u32 CreateFrameBuffers(App* app)
 {
     //Create Textures
     glGenTextures(1, &app->colorAttachmentHandle);
@@ -400,9 +400,9 @@ void InitializeFrameBuffers(App* app)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    app->framebufferHandle;
-    glGenFramebuffers(1, &app->framebufferHandle);
-    glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
+    u32 framebufferHandle;
+    glGenFramebuffers(1, &framebufferHandle);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebufferHandle);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, app->colorAttachmentHandle, 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, app->normalAttachmentHandle, 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->albedoAttachmentHandle, 0);
@@ -433,6 +433,12 @@ void InitializeFrameBuffers(App* app)
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    return framebufferHandle;
+}
+
+void ResizeFramebuffers(App* app)
+{
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 }
 
 void Init(App* app)
@@ -456,7 +462,8 @@ void Init(App* app)
     InitializeTextureQuad(app);
     InitializeTextureMesh(app);
 
-    InitializeFrameBuffers(app);
+    app->framebufferHandle = CreateFrameBuffers(app);
+    app->currentAttachmentHandle = app->colorAttachmentHandle;
 
     app->camera.pos = glm::vec3(0.0f, 1.0f, 9.0f);
     app->camera.angles = glm::vec3(0.0f);
@@ -507,15 +514,22 @@ void Gui(App* app)
     Docking();
     static bool demoOpen = false;
     static bool engineInfoOpen = true;
+    static bool viewModeOpen = true;
 
     if (ImGui::BeginMainMenuBar())
     {
         if (ImGui::BeginMenu("Control Panel")) {
-            if (ImGui::MenuItem("Control Panel", NULL, engineInfoOpen)) {
+
+            if (ImGui::MenuItem("Info", NULL, engineInfoOpen)) {
                 engineInfoOpen = !engineInfoOpen;
+            }
+
+            if (ImGui::MenuItem("View Mode", NULL, viewModeOpen)) {
+                viewModeOpen = !viewModeOpen;
             }
             ImGui::EndMenu();
         }
+
         ImGui::EndMainMenuBar();
     }
 
@@ -538,12 +552,12 @@ void Gui(App* app)
             {
                 vec3 translate = app->camera.pos;
 
-                if (ImGui::DragFloat3("Position", (float*)&translate, 0.1f))
+                if (ImGui::DragFloat3("Position ##camera", (float*)&translate, 0.1f))
                 {
-                    app->view = glm::translate(translate);
                     app->camera.pos = translate;
+                    app->view = glm::lookAt(app->camera.pos, app->camera.target, vec3(0.0f, 1.0f, 0.0f));
                 }
-                if (ImGui::DragFloat3("Rotation", (float*)&app->camera.angles, 0.1f))
+                if (ImGui::DragFloat3("Rotation ##camera", (float*)&app->camera.angles, 0.1f))
                 {
 
                 }
@@ -552,11 +566,61 @@ void Gui(App* app)
             if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_CollapsingHeader))
             {
                 vec3 ligthPos = app->lights[0].pos;
-                if (ImGui::DragFloat3("Position Light", (float*)&ligthPos, 0.1f))
+                if (ImGui::DragFloat3("Position ##lights", (float*)&ligthPos, 0.1f))
                 {
                     app->lights[0].pos = ligthPos;
                 }
 
+            }
+
+            ImGui::End();
+        }
+    }
+
+    if (viewModeOpen)
+    {
+        if (ImGui::Begin("Options", &viewModeOpen)) {
+
+            ImGui::Text("Render Mode");
+            ImGui::Separator();
+            const char* items[] = { "Scene", "Normal", "Albedo", "Depth" };
+            static const char* current = "Scene";
+
+            if (ImGui::BeginCombo("##views Mode", current))
+            {
+                for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+                {
+                    bool is_selected = (current == items[n]); // You can store your selection however you want, outside or inside your objects
+                    if (ImGui::Selectable(items[n], is_selected))
+                    {
+                        current = items[n];
+                        if (current == "Scene")
+                        {
+                            app->currentAttachmentHandle = app->colorAttachmentHandle;
+                        }
+
+                        if (current == "Normal")
+                        {
+                            app->currentAttachmentHandle = app->normalAttachmentHandle;
+                        }
+
+                        if (current == "Albedo")
+                        {
+                            app->currentAttachmentHandle = app->albedoAttachmentHandle;
+                        }
+
+                        if (current == "Depth")
+                        {
+                            app->currentAttachmentHandle = app->depthColorAttachmentHandle;
+                        }
+                    }
+
+                    if (is_selected)
+                       ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                           
+                      
+                }
+                ImGui::EndCombo();
             }
 
             ImGui::End();
@@ -621,6 +685,7 @@ void Update(App* app)
     glUnmapBuffer(GL_UNIFORM_BUFFER);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
+
 
 GLuint FindVAO(Mesh& mesh, u32 submeshIndex, const Program& program)
 {
@@ -770,7 +835,7 @@ void Render(App* app)
 
                 glUniform1i(app->textureQuadProgram_uTexture, 0);
 
-                glBindTexture(GL_TEXTURE_2D, app->depthColorAttachmentHandle);
+                glBindTexture(GL_TEXTURE_2D, app->currentAttachmentHandle);
 
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
