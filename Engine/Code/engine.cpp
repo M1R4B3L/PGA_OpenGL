@@ -436,11 +436,6 @@ u32 CreateFrameBuffers(App* app)
     return framebufferHandle;
 }
 
-void ResizeFramebuffers(App* app)
-{
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-}
-
 void Init(App* app)
 {
     // TODO: Initialize your resources here!
