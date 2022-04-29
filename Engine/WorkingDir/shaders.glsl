@@ -55,6 +55,7 @@ struct Light
     vec3 pos;
     unsigned int type;
 	float range;
+	vec3 attenuation;
 };
 
 layout(location=0) in vec3 aPosition;
@@ -101,6 +102,7 @@ struct Light
     vec3 pos;
     unsigned int type;
 	float range;
+	vec3 attenuation;
 };
 
 in vec2 vTexCoord;
@@ -134,45 +136,60 @@ float LinearizeDepth(float depth)
 void main()
 {
 	oColor = texture(uTexture, vTexCoord);
-	nColor = vec4(vNormal,1.0);
+	nColor = vec4(normalize(vNormal),1.0);
 	albedoColor = oColor;
 	depthColor = vec4(vec3(LinearizeDepth(gl_FragCoord.z) / far),1.0);
 
-	for(int i = 0; i < uLightCount; ++i) {
+	vec3 objectCol = vec3(oColor.x, oColor.y, oColor.z);
+	vec3 ambient;
+	vec3 diffuse;
+	vec3 specular;
 
-		Light currentLight = uLight[i];
-		float distance = length(currentLight.pos - vPosition);
-		vec3  lDir = normalize(currentLight.pos - vPosition);
-		float intensity;
-	
-		if(currentLight.type == 0) 
-		{
-			intensity = dot(vNormal, currentLight.dir);
-			oColor += vec4(currentLight.col * intensity, 1.0);
-		}
-		else if(currentLight.type == 1)
-		{
-			float cons = currentLight.dir.x;
-			float linear = currentLight.dir.y;
-			float quadratic = currentLight.dir.z;
-			float attenuation = 1.0 / (cons + linear * distance + quadratic * (distance * distance));
-			intensity = dot(vNormal, lDir) * attenuation;
-			oColor += vec4(currentLight.col * intensity, 1.0);
-		}
-		else if(currentLight.type == 2)
-		{
-			float cutOff = cos(radians(20.0));
-			float theta = dot(lDir,normalize(currentLight.dir));
+	vec3 normal = normalize(vNormal);
 
-			if(theta > cutOff)
-			{
-				float attenuation = 1.0 - (1.0 - theta) / (1.0 - cutOff);
-				intensity = dot(vNormal, lDir) * attenuation;
-				oColor += vec4(currentLight.col * intensity, 1.0);
-			}
+	vec3 lightDir;
+	vec3 viewDir = normalize(vViewDir); 
+	vec3 reflectDir;
+
+	float diff;
+	float spec;
+
+	for(int i = 0; i < uLightCount; ++i)
+	{	
+		if(uLight[i].type == 0)
+		{
+			lightDir = normalize(uLight[i].dir);
+			reflectDir = reflect(-lightDir, normal);
+
+			diff = max(dot(normal, lightDir),0.0);
+			spec = pow(max(dot(viewDir, reflectDir),0.0),32);
+
+			ambient = uLight[i].col * 0.2;
+			diffuse = diff * uLight[i].col * 0.7;
+			specular = spec * uLight[i].col * 0.5;
+		}
+		if(uLight[i].type == 1)
+		{
+			lightDir = normalize(uLight[i].pos - vPosition);
+			reflectDir = reflect(-lightDir, normal);
+
+			float distance = length(uLight[i].pos - vPosition);
+			float atten = 1.0 / (uLight[i].attenuation.x + uLight[i].attenuation.y * distance + uLight[i].attenuation.z * (distance * distance));
+
+			diff = max(dot(normal, lightDir),0.0);
+			spec = pow(max(dot(viewDir, reflectDir),0.0),32);
+
+			ambient = uLight[i].col * 0.2 * atten;
+			diffuse = diff * uLight[i].col * 0.7 * atten;
+			specular = spec * uLight[i].col * 0.5 * atten; 
 		}
 
 	}
+
+	vec3 resultCol = (ambient + diffuse + specular) * objectCol;
+
+	oColor = vec4(resultCol,1.0);
+	
 
 }
 

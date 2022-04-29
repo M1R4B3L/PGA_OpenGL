@@ -157,6 +157,7 @@ struct Light
     vec3 pos;
     LightType type;
     u32 range;
+    vec3 attenuation;
 };
 
 struct Camera

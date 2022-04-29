@@ -469,10 +469,11 @@ void Init(App* app)
 
     Light light;
     light.pos = vec3(0.0f,0.0f,0.0f);
-    light.type = LightType::Directional;
-    light.col = vec3(1.0f,1.0f,0.0f);
+    light.type = LightType::Point;
+    light.col = vec3(1.0f,1.0f,1.0f);
     light.range = 200.0f;
-    light.dir = GetAttenuation(light.range);
+    light.dir = vec3(1.0f);
+    light.attenuation = GetAttenuation(light.range);
     app->lights.push_back(light);
 }
 
@@ -560,10 +561,23 @@ void Gui(App* app)
             }
             if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_CollapsingHeader))
             {
+                vec3 lightDir = app->lights[0].dir;
                 vec3 ligthPos = app->lights[0].pos;
+                vec3 ligthCol = app->lights[0].col;
+
+                if (ImGui::DragFloat3("Dir ##lights", (float*)&lightDir, 0.1f))
+                {
+                    app->lights[0].dir = lightDir;
+                }
+
                 if (ImGui::DragFloat3("Position ##lights", (float*)&ligthPos, 0.1f))
                 {
                     app->lights[0].pos = ligthPos;
+                }
+
+                if (ImGui::DragFloat3("Color ##lights", (float*)&ligthCol, 0.01f,0.0f,1.0f))
+                {
+                    app->lights[0].col = ligthCol;
                 }
 
             }
