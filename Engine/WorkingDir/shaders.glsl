@@ -123,6 +123,7 @@ layout(location=0) out vec4 oColor;
 layout(location=1) out vec4 nColor;
 layout(location=2) out vec4 albedoColor;
 layout(location=3) out vec4 depthColor;
+layout(location=4) out vec4 positionColor;
 
 float near = 0.1; 
 float far  = 100.0; 
@@ -139,6 +140,7 @@ void main()
 	nColor = vec4(normalize(vNormal),1.0);
 	albedoColor = oColor;
 	depthColor = vec4(vec3(LinearizeDepth(gl_FragCoord.z) / far),1.0);
+	positionColor = vec4(vPosition,1.0);
 
 	vec3 objectCol = vec3(oColor.x, oColor.y, oColor.z);
 	vec3 ambient;
@@ -158,38 +160,41 @@ void main()
 
 	for(int i = 0; i < uLightCount; ++i)
 	{	
-		if(uLight[i].type == 0)
+		Light currentLight = uLight[i];
+
+	    switch (currentLight.type)
 		{
-			lightDir = normalize(uLight[i].dir);
+			case 0:
+			lightDir = normalize(currentLight.dir);
 			reflectDir = reflect(-lightDir, normal);
 
 			diff = max(dot(normal, lightDir),0.0);
 			spec = pow(max(dot(viewDir, reflectDir),0.0),32);
 
-			ambient = uLight[i].col * 0.2;
-			diffuse = diff * uLight[i].col * 0.7;
-			specular = spec * uLight[i].col * 0.5;
+			ambient = currentLight.col * 0.2;
+			diffuse = diff * currentLight.col * 0.7;
+			specular = spec * currentLight.col * 0.5;
 
 			resultCol = (ambient + diffuse + specular) * objectCol;
-		}
-		if(uLight[i].type == 1)
-		{
-			lightDir = normalize(uLight[i].pos - vPosition);
+			break;
+
+			case 1:
+			lightDir = normalize(currentLight.pos - vPosition);
 			reflectDir = reflect(-lightDir, normal);
 
-			float distance = length(uLight[i].pos - vPosition);
-			float atten = 1.0 / (uLight[i].attenuation.x + uLight[i].attenuation.y * distance + uLight[i].attenuation.z * (distance * distance));
+			float distance = length(currentLight.pos - vPosition);
+			float atten = 1.0 / (currentLight.attenuation.x + currentLight.attenuation.y * distance + currentLight.attenuation.z * (distance * distance));
 
 			diff = max(dot(normal, lightDir),0.0);
 			spec = pow(max(dot(viewDir, reflectDir),0.0),32);
 
-			ambient = uLight[i].col * 0.2 * atten;
-			diffuse = diff * uLight[i].col * 0.7 * atten;
-			specular = spec * uLight[i].col * 0.5 * atten; 
+			ambient = currentLight.col * 0.2 * atten;
+			diffuse = diff * currentLight.col * 0.7 * atten;
+			specular = spec * currentLight.col * 0.5 * atten; 
 
 			resultCol += (ambient + diffuse + specular) * objectCol;
-		}
-
+			break;
+		}	
 	}
 
 	oColor = vec4(resultCol,1.0);

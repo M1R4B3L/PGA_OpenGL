@@ -390,6 +390,16 @@ u32 CreateFrameBuffers(App* app)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    glGenTextures(1, &app->positionColorAttachmentHandle);
+    glBindTexture(GL_TEXTURE_2D, app->positionColorAttachmentHandle);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     glGenTextures(1, &app->depthAttachmentHandle);
     glBindTexture(GL_TEXTURE_2D, app->depthAttachmentHandle);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
@@ -407,6 +417,7 @@ u32 CreateFrameBuffers(App* app)
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, app->normalAttachmentHandle, 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->albedoAttachmentHandle, 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, app->depthColorAttachmentHandle, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, app->positionColorAttachmentHandle, 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, app->depthAttachmentHandle, 0);
 
     GLenum framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -427,7 +438,7 @@ u32 CreateFrameBuffers(App* app)
         }
     }
 
-    u32 drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+    u32 drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
 
     glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
@@ -601,7 +612,7 @@ void Gui(App* app)
 
             ImGui::Text("Render Mode");
             ImGui::Separator();
-            const char* items[] = { "Scene", "Normal", "Albedo", "Depth" };
+            const char* items[] = { "Scene", "Normal", "Albedo", "Depth", "Position"};
             static const char* current = "Scene";
 
             if (ImGui::BeginCombo("##views Mode", current))
@@ -630,6 +641,10 @@ void Gui(App* app)
                         if (current == "Depth")
                         {
                             app->currentAttachmentHandle = app->depthColorAttachmentHandle;
+                        }   
+                        if (current == "Position")
+                        {
+                            app->currentAttachmentHandle = app->positionColorAttachmentHandle;
                         }
                     }
 
@@ -648,6 +663,7 @@ void Gui(App* app)
     if (demoOpen) {
         ImGui::ShowDemoWindow(&demoOpen);
     }
+
  
 }
 
