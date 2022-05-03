@@ -154,6 +154,8 @@ void main()
 	float diff;
 	float spec;
 
+	vec3 resultCol;
+
 	for(int i = 0; i < uLightCount; ++i)
 	{	
 		if(uLight[i].type == 0)
@@ -167,6 +169,8 @@ void main()
 			ambient = uLight[i].col * 0.2;
 			diffuse = diff * uLight[i].col * 0.7;
 			specular = spec * uLight[i].col * 0.5;
+
+			resultCol = (ambient + diffuse + specular) * objectCol;
 		}
 		if(uLight[i].type == 1)
 		{
@@ -182,14 +186,13 @@ void main()
 			ambient = uLight[i].col * 0.2 * atten;
 			diffuse = diff * uLight[i].col * 0.7 * atten;
 			specular = spec * uLight[i].col * 0.5 * atten; 
+
+			resultCol += (ambient + diffuse + specular) * objectCol;
 		}
 
 	}
 
-	vec3 resultCol = (ambient + diffuse + specular) * objectCol;
-
 	oColor = vec4(resultCol,1.0);
-	
 
 }
 

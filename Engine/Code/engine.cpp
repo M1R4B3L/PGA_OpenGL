@@ -436,6 +436,20 @@ u32 CreateFrameBuffers(App* app)
     return framebufferHandle;
 }
 
+Light CreateLight(LightType type, vec3 pos, vec3 dir, vec3 col, float range)
+{
+    Light light;
+
+    light.type = type;
+    light.pos = pos;
+    light.dir = dir;
+    light.col = col;
+    light.range = range;
+    light.attenuation = GetAttenuation(light.range);
+
+    return light;
+}
+
 void Init(App* app)
 {
     // TODO: Initialize your resources here!
@@ -466,15 +480,10 @@ void Init(App* app)
     app->camera.aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
 
     // Lights
-
-    Light light;
-    light.pos = vec3(0.0f,0.0f,0.0f);
-    light.type = LightType::Point;
-    light.col = vec3(1.0f,1.0f,1.0f);
-    light.range = 200.0f;
-    light.dir = vec3(1.0f);
-    light.attenuation = GetAttenuation(light.range);
-    app->lights.push_back(light);
+    Light light0 = CreateLight(LightType::Directional, vec3(1.0f, 0.0f, 5.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 200.0f);
+    Light light1 = CreateLight(LightType::Point, vec3(1.0f, 0.0f, 5.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 200.0f);
+    app->lights.push_back(light0);      //Directional always first and only 1;
+    app->lights.push_back(light1);
 }
 
 void Docking()
@@ -561,23 +570,23 @@ void Gui(App* app)
             }
             if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_CollapsingHeader))
             {
-                vec3 lightDir = app->lights[0].dir;
-                vec3 ligthPos = app->lights[0].pos;
-                vec3 ligthCol = app->lights[0].col;
+                vec3 lightDir = app->lights[1].dir;
+                vec3 ligthPos = app->lights[1].pos;
+                vec3 ligthCol = app->lights[1].col;
 
                 if (ImGui::DragFloat3("Dir ##lights", (float*)&lightDir, 0.1f))
                 {
-                    app->lights[0].dir = lightDir;
+                    app->lights[1].dir = lightDir;
                 }
 
                 if (ImGui::DragFloat3("Position ##lights", (float*)&ligthPos, 0.1f))
                 {
-                    app->lights[0].pos = ligthPos;
+                    app->lights[1].pos = ligthPos;
                 }
 
                 if (ImGui::DragFloat3("Color ##lights", (float*)&ligthCol, 0.01f,0.0f,1.0f))
                 {
-                    app->lights[0].col = ligthCol;
+                    app->lights[1].col = ligthCol;
                 }
 
             }
@@ -673,6 +682,7 @@ void Update(App* app)
         PushVec3(app->cBuffer, light.pos);
         PushUInt(app->cBuffer, (u32)light.type);
         PushFloat(app->cBuffer, light.range);
+        PushVec3(app->cBuffer, light.attenuation);
     }
     app->gloabalParamsSize = app->cBuffer.head - app->gloabalParamsOffset;
 
