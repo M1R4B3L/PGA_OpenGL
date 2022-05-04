@@ -124,6 +124,7 @@ layout(location=1) out vec4 nColor;
 layout(location=2) out vec4 albedoColor;
 layout(location=3) out vec4 depthColor;
 layout(location=4) out vec4 positionColor;
+layout(location=5) out vec4 specularColor;
 
 float near = 0.1; 
 float far  = 100.0; 
@@ -141,6 +142,7 @@ void main()
 	albedoColor = oColor;
 	depthColor = vec4(vec3(LinearizeDepth(gl_FragCoord.z) / far),1.0);
 	positionColor = vec4(vPosition,1.0);
+	specularColor = vec4(vec3(vTexCoord,0.0),1.0);
 
 	vec3 objectCol = vec3(oColor.x, oColor.y, oColor.z);
 	vec3 ambient;

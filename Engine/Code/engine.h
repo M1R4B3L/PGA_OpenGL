@@ -248,6 +248,7 @@ struct App
     u32 albedoAttachmentHandle;
     u32 depthColorAttachmentHandle;
     u32 positionColorAttachmentHandle;
+    u32 specularColorAttachmentHandle;
     u32 depthAttachmentHandle;
 
     u32 framebufferHandle;

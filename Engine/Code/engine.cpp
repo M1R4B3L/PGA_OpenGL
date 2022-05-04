@@ -400,6 +400,16 @@ u32 CreateFrameBuffers(App* app)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    glGenTextures(1, &app->specularColorAttachmentHandle);
+    glBindTexture(GL_TEXTURE_2D, app->specularColorAttachmentHandle);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
     glGenTextures(1, &app->depthAttachmentHandle);
     glBindTexture(GL_TEXTURE_2D, app->depthAttachmentHandle);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
@@ -418,6 +428,7 @@ u32 CreateFrameBuffers(App* app)
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->albedoAttachmentHandle, 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, app->depthColorAttachmentHandle, 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, app->positionColorAttachmentHandle, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, app->specularColorAttachmentHandle, 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, app->depthAttachmentHandle, 0);
 
     GLenum framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -438,13 +449,66 @@ u32 CreateFrameBuffers(App* app)
         }
     }
 
-    u32 drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+    u32 drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5 };
 
     glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     return framebufferHandle;
+}
+
+void CreateSphere()
+{
+    Submesh* subMesh;
+
+    const u32 H = 32;
+    const u32 V = 16;
+    struct Vertex { vec3 pos; vec3 norm; };
+    Vertex sphere[H][V+1];
+
+    for (int h = 0; h < H; ++h)
+    {
+        for (int v = 0; v < V; ++v)
+        {
+            float nh = float(h) / H;
+            float nv = float(v) / V - 0.5f;
+            float angleh = 2 * PI * nh;
+            float anglev = -PI * nv;
+            sphere[h][v].pos.x = sinf(angleh) * cosf(anglev);
+            sphere[h][v].pos.y = -sinf(anglev);
+            sphere[h][v].pos.z = cosf(angleh) * cosf(anglev);
+            sphere[h][v].norm = sphere[h][v].pos;
+            subMesh->vertices.push_back(sphere[h][v].pos.x);
+            subMesh->vertices.push_back(sphere[h][v].pos.y);
+            subMesh->vertices.push_back(sphere[h][v].pos.z);
+        }
+    }
+
+    u32 sphereIndices[H][V][6];
+    for (u32 h = 0; h < H; ++h)
+    {
+        for (u32 v = 0; v < V; ++v)
+        {
+            sphereIndices[h][v][0] = (h + 0)     * (V + 1) + v;
+            sphereIndices[h][v][1] = ((h + 1)%H) * (V + 1) + v;
+            sphereIndices[h][v][2] = ((h + 1)%H) * (V + 1) + v + 1;
+            sphereIndices[h][v][3] = (h + 0)     * (V + 1) + v;
+            sphereIndices[h][v][4] = ((h + 1)%H) * (V + 1) + v + 1;
+            sphereIndices[h][v][5] = (h + 0)     * (V + 1) + v + 1;
+            subMesh->indices.push_back(sphere[h][v]);
+            subMesh->indices.push_back(sphere[h][v]);
+
+        }
+    }
+
+    VertexBufferLayout vertexLayout;
+    vertexLayout.attributes.push_back({0, 0, 3});
+    vertexLayout.attributes.push_back({1, sizeof(vec3), 3});
+
+    Submesh* subMesh;
+    subMesh->vertexBufferLayout = vertexLayout;
+
 }
 
 Light CreateLight(LightType type, vec3 pos, vec3 dir, vec3 col, float range)
@@ -470,6 +534,9 @@ void Init(App* app)
     // - programs (and retrieve uniform indices)
     // - textures
 
+    CreateSphere();
+
+
     //Geometry
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
@@ -481,6 +548,8 @@ void Init(App* app)
 
     InitializeTextureQuad(app);
     InitializeTextureMesh(app);
+
+
 
     app->framebufferHandle = CreateFrameBuffers(app);
     app->currentAttachmentHandle = app->colorAttachmentHandle;
@@ -612,7 +681,7 @@ void Gui(App* app)
 
             ImGui::Text("Render Mode");
             ImGui::Separator();
-            const char* items[] = { "Scene", "Normal", "Albedo", "Depth", "Position"};
+            const char* items[] = { "Scene", "Normal", "Albedo", "Depth", "Position", "Specular"};
             static const char* current = "Scene";
 
             if (ImGui::BeginCombo("##views Mode", current))
@@ -645,6 +714,10 @@ void Gui(App* app)
                         if (current == "Position")
                         {
                             app->currentAttachmentHandle = app->positionColorAttachmentHandle;
+                        }  
+                        if (current == "Specular")
+                        {
+                            app->currentAttachmentHandle = app->specularColorAttachmentHandle;
                         }
                     }
 
