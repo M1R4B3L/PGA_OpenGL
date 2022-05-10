@@ -458,14 +458,21 @@ u32 CreateFrameBuffers(App* app)
     return framebufferHandle;
 }
 
-void CreateSphere()
+void CreateSphere(App* app)
 {
-    Submesh* subMesh;
-
     const u32 H = 32;
     const u32 V = 16;
     struct Vertex { vec3 pos; vec3 norm; };
-    Vertex sphere[H][V+1];
+    Vertex sphere[H][V + 1];
+
+    Submesh subMesh = {};
+
+    VertexBufferLayout vertexLayout;
+    vertexLayout.attributes.push_back({ 0, 3, 0 });
+    vertexLayout.attributes.push_back({ 1, 3, 3 * sizeof(float) });
+
+    subMesh.vertexBufferLayout = vertexLayout;
+    subMesh.vertices.reserve(32 * 16 * 6);
 
     for (int h = 0; h < H; ++h)
     {
@@ -479,13 +486,17 @@ void CreateSphere()
             sphere[h][v].pos.y = -sinf(anglev);
             sphere[h][v].pos.z = cosf(angleh) * cosf(anglev);
             sphere[h][v].norm = sphere[h][v].pos;
-            subMesh->vertices.push_back(sphere[h][v].pos.x);
-            subMesh->vertices.push_back(sphere[h][v].pos.y);
-            subMesh->vertices.push_back(sphere[h][v].pos.z);
+            subMesh.vertices.push_back(sphere[h][v].pos.x);
+            subMesh.vertices.push_back(sphere[h][v].pos.y);
+            subMesh.vertices.push_back(sphere[h][v].pos.z);
+            subMesh.vertices.push_back(sphere[h][v].norm.x);
+            subMesh.vertices.push_back(sphere[h][v].norm.y);
+            subMesh.vertices.push_back(sphere[h][v].norm.z);
         }
     }
 
     u32 sphereIndices[H][V][6];
+    subMesh.indices.reserve(32 * 16 * 6);
     for (u32 h = 0; h < H; ++h)
     {
         for (u32 v = 0; v < V; ++v)
@@ -496,19 +507,32 @@ void CreateSphere()
             sphereIndices[h][v][3] = (h + 0)     * (V + 1) + v;
             sphereIndices[h][v][4] = ((h + 1)%H) * (V + 1) + v + 1;
             sphereIndices[h][v][5] = (h + 0)     * (V + 1) + v + 1;
-            subMesh->indices.push_back(sphere[h][v]);
-            subMesh->indices.push_back(sphere[h][v]);
+            subMesh.indices.push_back(sphereIndices[h][v][0]);
+            subMesh.indices.push_back(sphereIndices[h][v][1]);
+            subMesh.indices.push_back(sphereIndices[h][v][2]);
+            subMesh.indices.push_back(sphereIndices[h][v][3]);
+            subMesh.indices.push_back(sphereIndices[h][v][4]);
+            subMesh.indices.push_back(sphereIndices[h][v][5]);
 
         }
     }
 
-    VertexBufferLayout vertexLayout;
-    vertexLayout.attributes.push_back({0, 0, 3});
-    vertexLayout.attributes.push_back({1, sizeof(vec3), 3});
+    Mesh mesh = {};
+    mesh.submeshes.push_back(subMesh);
 
-    Submesh* subMesh;
-    subMesh->vertexBufferLayout = vertexLayout;
+    glGenBuffers(1, &mesh.vertexBufferHandle);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
+    glBufferData(GL_ARRAY_BUFFER, subMesh.vertices.size(), NULL, GL_STATIC_DRAW);
 
+    glGenBuffers(1, &mesh.indexBufferHandle);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, subMesh.indices.size(), NULL, GL_STATIC_DRAW);
+
+    app->meshes.push_back(mesh);
+
+    Entity entity = Entity(glm::mat4(1.0f), app->models.size() - 1, 0, 0);
+    entity.worldMatrix = TransformPositionScale(vec3(0.0, 0.0, 0.0), vec3(1.f));
+    app->enTities.push_back(entity);
 }
 
 Light CreateLight(LightType type, vec3 pos, vec3 dir, vec3 col, float range)
@@ -534,7 +558,7 @@ void Init(App* app)
     // - programs (and retrieve uniform indices)
     // - textures
 
-    CreateSphere();
+    CreateSphere(app);
 
 
     //Geometry
