@@ -328,7 +328,7 @@ void InitializeTextureMesh(App* app)
 {
     u32 patrick = LoadModel(app, "Patrick/Patrick.obj");
 
-    Entity enTity1 = Entity(glm::mat4(1.0f), patrick, 0,0);
+    Entity enTity1 = Entity(glm::mat4(1.0f), patrick, 0, 0);
     enTity1.worldMatrix = TransformPositionScale(vec3(0.0, 0.0, 0.0), vec3(0.45f));
     app->enTities.push_back(enTity1);
 
@@ -460,23 +460,29 @@ u32 CreateFrameBuffers(App* app)
 
 void CreateSphere(App* app)
 {
+    app->meshes.push_back(Mesh{});
+    Mesh& mesh = app->meshes.back();
+    u32 meshIdx = (u32)app->meshes.size() - 1u;
+
+    app->models.push_back(Model{});
+    Model& model = app->models.back();
+    model.meshIdx = meshIdx;
+    u32 modelIdx = (u32)app->models.size() - 1u;
+
+    mesh.submeshes.push_back(Submesh{});
+    Submesh& subMesh = mesh.submeshes.back();
+
+    subMesh.vertexOffset = 0;
+    subMesh.indexOffset = 0;
+
     const u32 H = 32;
     const u32 V = 16;
     struct Vertex { vec3 pos; vec3 norm; };
     Vertex sphere[H][V + 1];
 
-    Submesh subMesh = {};
-
-    VertexBufferLayout vertexLayout;
-    vertexLayout.attributes.push_back({ 0, 3, 0 });
-    vertexLayout.attributes.push_back({ 1, 3, 3 * sizeof(float) });
-
-    subMesh.vertexBufferLayout = vertexLayout;
-    subMesh.vertices.reserve(32 * 16 * 6);
-
     for (int h = 0; h < H; ++h)
     {
-        for (int v = 0; v < V; ++v)
+        for (int v = 0; v < V + 1; ++v)
         {
             float nh = float(h) / H;
             float nv = float(v) / V - 0.5f;
@@ -492,11 +498,22 @@ void CreateSphere(App* app)
             subMesh.vertices.push_back(sphere[h][v].norm.x);
             subMesh.vertices.push_back(sphere[h][v].norm.y);
             subMesh.vertices.push_back(sphere[h][v].norm.z);
+            //TexCoords
+            subMesh.vertices.push_back(0);
+            subMesh.vertices.push_back(0);
+            //Tangents
+            subMesh.vertices.push_back(0);
+            subMesh.vertices.push_back(0);
+            subMesh.vertices.push_back(0);
+            //Bitangets
+            subMesh.vertices.push_back(0);
+            subMesh.vertices.push_back(0);
+            subMesh.vertices.push_back(0);
         }
     }
 
     u32 sphereIndices[H][V][6];
-    subMesh.indices.reserve(32 * 16 * 6);
+
     for (u32 h = 0; h < H; ++h)
     {
         for (u32 v = 0; v < V; ++v)
@@ -517,18 +534,61 @@ void CreateSphere(App* app)
         }
     }
 
-    Mesh mesh = {};
-    mesh.submeshes.push_back(subMesh);
+    VertexBufferLayout vertexLayout;
+    vertexLayout.attributes.push_back({ 0, 3, 0 });
+    vertexLayout.attributes.push_back({ 1, 3, 3 * sizeof(float) });
+    vertexLayout.stride = 6 * sizeof(float);
 
+    vertexLayout.attributes.push_back(VertexBufferAttribute{ 2, 2, vertexLayout.stride });
+    vertexLayout.stride += 2 * sizeof(float);
+
+    vertexLayout.attributes.push_back(VertexBufferAttribute{ 3, 3, vertexLayout.stride });
+    vertexLayout.stride += 3 * sizeof(float);
+
+    vertexLayout.attributes.push_back(VertexBufferAttribute{ 4, 3, vertexLayout.stride });
+    vertexLayout.stride += 3 * sizeof(float);
+
+    subMesh.vertexBufferLayout = vertexLayout;
+
+    u32 vertexBufferSize = 0;
+    u32 indexBufferSize = 0;
+
+    vertexBufferSize += subMesh.vertices.size() * sizeof(float);
+    indexBufferSize += subMesh.indices.size() * sizeof(u32);
+   
     glGenBuffers(1, &mesh.vertexBufferHandle);
     glBindBuffer(GL_ARRAY_BUFFER, mesh.vertexBufferHandle);
-    glBufferData(GL_ARRAY_BUFFER, subMesh.vertices.size(), NULL, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertexBufferSize, NULL, GL_STATIC_DRAW);
 
     glGenBuffers(1, &mesh.indexBufferHandle);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.indexBufferHandle);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, subMesh.indices.size(), NULL, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBufferSize, NULL, GL_STATIC_DRAW);
 
-    app->meshes.push_back(mesh);
+    u32 indicesOffset = 0;
+    u32 verticesOffset = 0;
+
+    const void* verticesData = subMesh.vertices.data();
+    const u32   verticesSize = subMesh.vertices.size() * sizeof(float);
+    glBufferSubData(GL_ARRAY_BUFFER, verticesOffset, verticesSize, verticesData);
+    subMesh.vertexOffset = verticesOffset;
+    verticesOffset += verticesSize;
+
+    const void* indicesData = subMesh.indices.data();
+    const u32   indicesSize = subMesh.indices.size() * sizeof(u32);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, indicesOffset, indicesSize, indicesData);
+    subMesh.indexOffset = indicesOffset;
+    indicesOffset += indicesSize;
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    app->materials.push_back(Material{});
+    Material& material = app->materials.back();
+    material.albedo = vec3(0);
+
+    u32 materialIdx = LoadTexture2D(app, "color_magenta.png");
+
+    model.materialIdx.push_back(materialIdx);
 
     Entity entity = Entity(glm::mat4(1.0f), app->models.size() - 1, 0, 0);
     entity.worldMatrix = TransformPositionScale(vec3(0.0, 0.0, 0.0), vec3(1.f));
@@ -694,7 +754,19 @@ void Gui(App* app)
                 }
 
             }
+            if (ImGui::CollapsingHeader("Entities", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_CollapsingHeader))
+            {
+                mat4 sphereMat = app->enTities[0].worldMatrix;
+                u32 sphere = app->enTities[0].modelIdx;
 
+                vec3 pos = vec3(0);
+
+                if (ImGui::DragFloat3("Pos ##sphere", (float*)&pos, 0.1f))
+                {
+                    app->enTities[0].worldMatrix = TransformPositionScale(pos,vec3(1.f));
+                }
+
+            }
             ImGui::End();
         }
     }
