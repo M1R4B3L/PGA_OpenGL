@@ -591,7 +591,6 @@ void CreateSphere(App* app)
     model.materialIdx.push_back(materialIdx);
 
     Entity entity = Entity(glm::mat4(1.0f), app->models.size() - 1, 0, 0);
-    entity.worldMatrix = TransformPositionScale(vec3(0.0, 0.0, 0.0), vec3(1.f));
     app->enTities.push_back(entity);
 }
 
@@ -757,13 +756,19 @@ void Gui(App* app)
             if (ImGui::CollapsingHeader("Entities", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_CollapsingHeader))
             {
                 mat4 sphereMat = app->enTities[0].worldMatrix;
-                u32 sphere = app->enTities[0].modelIdx;
 
-                vec3 pos = vec3(0);
+                static vec3 pos = vec3(0);
+                static float radius = 1.0f;
 
                 if (ImGui::DragFloat3("Pos ##sphere", (float*)&pos, 0.1f))
                 {
-                    app->enTities[0].worldMatrix = TransformPositionScale(pos,vec3(1.f));
+                    sphereMat = TransformPositionScale(pos, vec3(radius));
+                    app->enTities[0].worldMatrix = sphereMat;
+                }
+                if (ImGui::DragFloat("Radius ##sphere", (float*)&radius, 0.1f))
+                {
+                    sphereMat = TransformPositionScale(pos, vec3(radius));
+                    app->enTities[0].worldMatrix = sphereMat;
                 }
 
             }
@@ -792,17 +797,14 @@ void Gui(App* app)
                         {
                             app->currentAttachmentHandle = app->colorAttachmentHandle;
                         }
-
                         if (current == "Normal")
                         {
                             app->currentAttachmentHandle = app->normalAttachmentHandle;
                         }
-
                         if (current == "Albedo")
                         {
                             app->currentAttachmentHandle = app->albedoAttachmentHandle;
                         }
-
                         if (current == "Depth")
                         {
                             app->currentAttachmentHandle = app->depthColorAttachmentHandle;
@@ -842,9 +844,6 @@ void Update(App* app)
 
     app->projection = glm::perspective(glm::radians(60.0f), app->camera.aspectRatio, app->camera.zNear, app->camera.zFar);
     app->view = glm::lookAt(app->camera.pos, app->camera.target, vec3(0.0f, 1.0f, 0.0f));
-
-    //app->enTities[1].worldMatrix = glm::rotate(app->enTities[1].worldMatrix, glm::radians(app->time), glm::vec3(0.0f, 1.0f, 0.0f));
-    //app->time += 1.0f;
 
     //Uniforms
     glBindBuffer(GL_UNIFORM_BUFFER, app->cBuffer.handle);
