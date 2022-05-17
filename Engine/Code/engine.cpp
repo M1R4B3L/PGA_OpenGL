@@ -254,7 +254,7 @@ mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
     return transform;
 }
 
-void InitializeTextureQuad(App* app)
+void InitializeTextureQuad(App* app, const char* shaderName)
 {  
     f32 vertices[] = {  1, 1, 0.0, 1.0, 1.0,
                         1,-1, 0.0, 1.0, 0.0,
@@ -311,7 +311,7 @@ void InitializeTextureQuad(App* app)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, app->embeddedElements);
     glBindVertexArray(0);
 
-    app->texturedQuadProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_GEOMETRY");
+    app->texturedQuadProgramIdx = LoadProgram(app, "shaders.glsl", shaderName);
     Program& textureQuadProgram = app->programs[app->texturedQuadProgramIdx];
     app->textureQuadProgram_uTexture = glGetUniformLocation(textureQuadProgram.handle, "uTexture");
 
@@ -324,7 +324,7 @@ void InitializeTextureQuad(App* app)
     app->mode = Mode_TexturedQuad;
 }
 
-void InitializeTextureMesh(App* app)
+void InitializeTextureMesh(App* app, const char* shaderName)
 {
     u32 patrick = LoadModel(app, "Patrick/Patrick.obj");
 
@@ -340,75 +340,36 @@ void InitializeTextureMesh(App* app)
     enTity3.worldMatrix = TransformPositionScale(vec3(-2.0, 0.0, 5.0), vec3(0.45f));
     app->enTities.push_back(enTity3);
 
-    app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", "TEXTURED_PATRICIO");
+    app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", shaderName);
     Program& textureGeometryProgram = app->programs[app->texturedGeometryProgramIdx];
     app->textureMeshProgram_uTexture = glGetUniformLocation(textureGeometryProgram.handle, "uTexture");
 
     app->mode = Mode_TextureMesh;
 }
 
+void InitializeTextureLight(App* app, const char* shaderName)
+{
+    app->texturedLightProgramIdx = LoadProgram(app, "shaders.glsl", shaderName);
+    Program& textureLightProgram = app->programs[app->texturedGeometryProgramIdx];
+    app->textureLightProgram_uTexture = glGetUniformLocation(textureLightProgram.handle, "uTexture");
+}
+
+
 u32 CreateFrameBuffers(App* app)
 {
     //Create Textures
-    glGenTextures(1, &app->colorAttachmentHandle);
-    glBindTexture(GL_TEXTURE_2D, app->colorAttachmentHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);    //Time / Repeticion para texturas animadas
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);    //U
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);    //V
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    glGenTextures(1, &app->normalAttachmentHandle);
-    glBindTexture(GL_TEXTURE_2D, app->normalAttachmentHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);    
-    glBindTexture(GL_TEXTURE_2D, 0);
-    
-    glGenTextures(1, &app->albedoAttachmentHandle);
-    glBindTexture(GL_TEXTURE_2D, app->albedoAttachmentHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);    
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    glGenTextures(1, &app->depthColorAttachmentHandle);
-    glBindTexture(GL_TEXTURE_2D, app->depthColorAttachmentHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    glGenTextures(1, &app->positionColorAttachmentHandle);
-    glBindTexture(GL_TEXTURE_2D, app->positionColorAttachmentHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    glGenTextures(1, &app->specularColorAttachmentHandle);
-    glBindTexture(GL_TEXTURE_2D, app->specularColorAttachmentHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    for(int i = 0; i < 6; ++i)
+    { 
+        glGenTextures(1, &app->framebufferTexturesHandle[i]);
+        glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);    //Time / Repeticion para texturas animadas
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);    //U
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);    //V
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 
     glGenTextures(1, &app->depthAttachmentHandle);
     glBindTexture(GL_TEXTURE_2D, app->depthAttachmentHandle);
@@ -423,12 +384,12 @@ u32 CreateFrameBuffers(App* app)
     u32 framebufferHandle;
     glGenFramebuffers(1, &framebufferHandle);
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferHandle);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, app->colorAttachmentHandle, 0);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, app->normalAttachmentHandle, 0);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->albedoAttachmentHandle, 0);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, app->depthColorAttachmentHandle, 0);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, app->positionColorAttachmentHandle, 0);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, app->specularColorAttachmentHandle, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, app->framebufferTexturesHandle[0], 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, app->framebufferTexturesHandle[1], 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->framebufferTexturesHandle[2], 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, app->framebufferTexturesHandle[3], 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, app->framebufferTexturesHandle[4], 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, app->framebufferTexturesHandle[5], 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, app->depthAttachmentHandle, 0);
 
     GLenum framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -454,6 +415,8 @@ u32 CreateFrameBuffers(App* app)
     glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    app->currentAttachmentHandle = app->framebufferTexturesHandle[0];
 
     return framebufferHandle;
 }
@@ -586,7 +549,7 @@ void CreateSphere(App* app)
     Material& material = app->materials.back();
     material.albedo = vec3(0);
 
-    u32 materialIdx = LoadTexture2D(app, "color_magenta.png");
+    u32 materialIdx = 0;
 
     model.materialIdx.push_back(materialIdx);
 
@@ -617,9 +580,6 @@ void Init(App* app)
     // - programs (and retrieve uniform indices)
     // - textures
 
-    CreateSphere(app);
-
-
     //Geometry
     glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &app->maxUniformBufferSize);
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &app->uniformBlockAlignment);
@@ -629,13 +589,11 @@ void Init(App* app)
     glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-    InitializeTextureQuad(app);
-    InitializeTextureMesh(app);
-
-
+    InitializeTextureQuad(app, "TEXTURE_FILLQUAD");
+    InitializeTextureMesh(app,"TEXTURE_GEOMETRY");
+    InitializeTextureLight(app, "TEXTURE_LIGHT");
 
     app->framebufferHandle = CreateFrameBuffers(app);
-    app->currentAttachmentHandle = app->colorAttachmentHandle;
 
     app->camera.pos = glm::vec3(0.0f, 1.0f, 9.0f);
     app->camera.angles = glm::vec3(0.0f);
@@ -645,8 +603,9 @@ void Init(App* app)
     // Lights
     Light light0 = CreateLight(LightType::Directional, vec3(1.0f, 0.0f, 5.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 200.0f);
     Light light1 = CreateLight(LightType::Point, vec3(1.0f, 0.0f, 5.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 200.0f);
-    app->lights.push_back(light0);      //Directional always first and only 1;
+    app->lights.push_back(light0);      
     app->lights.push_back(light1);
+
 }
 
 void Docking()
@@ -795,27 +754,27 @@ void Gui(App* app)
                         current = items[n];
                         if (current == "Scene")
                         {
-                            app->currentAttachmentHandle = app->colorAttachmentHandle;
+                            app->currentAttachmentHandle = app->framebufferTexturesHandle[0];
                         }
                         if (current == "Normal")
                         {
-                            app->currentAttachmentHandle = app->normalAttachmentHandle;
+                            app->currentAttachmentHandle = app->framebufferTexturesHandle[1];
                         }
                         if (current == "Albedo")
                         {
-                            app->currentAttachmentHandle = app->albedoAttachmentHandle;
+                            app->currentAttachmentHandle = app->framebufferTexturesHandle[2];
                         }
                         if (current == "Depth")
                         {
-                            app->currentAttachmentHandle = app->depthColorAttachmentHandle;
+                            app->currentAttachmentHandle = app->framebufferTexturesHandle[3];
                         }   
                         if (current == "Position")
                         {
-                            app->currentAttachmentHandle = app->positionColorAttachmentHandle;
+                            app->currentAttachmentHandle = app->framebufferTexturesHandle[4];
                         }  
                         if (current == "Specular")
                         {
-                            app->currentAttachmentHandle = app->specularColorAttachmentHandle;
+                            app->currentAttachmentHandle = app->framebufferTexturesHandle[5];
                         }
                     }
 
@@ -868,6 +827,7 @@ void Update(App* app)
         PushFloat(app->cBuffer, light.range);
         PushVec3(app->cBuffer, light.attenuation);
     }
+    
     app->gloabalParamsSize = app->cBuffer.head - app->gloabalParamsOffset;
 
     //Local Params
@@ -1024,6 +984,15 @@ void Render(App* app)
                         glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
                     }
                 }
+
+                glBindVertexArray(0);
+                glUseProgram(0);
+
+                Program& textureLightProgram = app->programs[app->texturedLightProgramIdx];
+                glUseProgram(textureLightProgram.handle);
+
+                glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->cBuffer.handle, app->gloabalParamsOffset, app->gloabalParamsSize);
+
 
                 glBindVertexArray(0);
                 glUseProgram(0);

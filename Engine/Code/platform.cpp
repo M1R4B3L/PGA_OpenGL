@@ -109,25 +109,24 @@ void OnGlfwResizeFramebuffer(GLFWwindow* window, int width, int height)
 
     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
-    glBindTexture(GL_TEXTURE_2D, app->colorAttachmentHandle);
+    glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[0]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
-    glBindTexture(GL_TEXTURE_2D, app->normalAttachmentHandle);
+    glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[1]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
-    glBindTexture(GL_TEXTURE_2D, app->albedoAttachmentHandle);
+    glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[2]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
-    glBindTexture(GL_TEXTURE_2D, app->depthColorAttachmentHandle);
+    glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[3]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
-
-    glBindTexture(GL_TEXTURE_2D, app->positionColorAttachmentHandle);
+    glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[4]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
-
-    glBindTexture(GL_TEXTURE_2D, app->specularColorAttachmentHandle);
+    glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[5]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
 
     glBindTexture(GL_TEXTURE_2D, app->depthAttachmentHandle);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);

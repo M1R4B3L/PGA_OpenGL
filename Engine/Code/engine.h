@@ -207,6 +207,7 @@ struct App
     // program indices
     u32 texturedQuadProgramIdx;              // Location of the texture uniform in the textured quad shader
     u32 texturedGeometryProgramIdx;
+    u32 texturedLightProgramIdx;
     
     // texture indices
     u32 diceTexIdx;
@@ -216,8 +217,9 @@ struct App
     u32 magentaTexIdx;
 
     //Texture
-    u32 textureMeshProgram_uTexture;
     u32 textureQuadProgram_uTexture;
+    u32 textureMeshProgram_uTexture;
+    u32 textureLightProgram_uTexture;
 
     // Mode
     Mode mode;
@@ -243,12 +245,15 @@ struct App
 
     // Framebruffers
     u32 currentAttachmentHandle;
-    u32 colorAttachmentHandle;
+
+    u32 framebufferTexturesHandle[6];
+
+    /*u32 colorAttachmentHandle;
     u32 normalAttachmentHandle;
     u32 albedoAttachmentHandle;
     u32 depthColorAttachmentHandle;
     u32 positionColorAttachmentHandle;
-    u32 specularColorAttachmentHandle;
+    u32 specularColorAttachmentHandle;*/
     u32 depthAttachmentHandle;
 
     u32 framebufferHandle;
