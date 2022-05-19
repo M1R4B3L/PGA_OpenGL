@@ -158,6 +158,10 @@ struct Light
     LightType type;
     u32 range;
     vec3 attenuation;
+
+    glm::mat4 worldMatrix;
+    u32 localParamsOffset;
+    u32 localParamsSize;
 };
 
 struct Camera
