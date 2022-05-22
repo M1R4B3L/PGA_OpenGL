@@ -129,14 +129,26 @@ struct Material
 
 struct Entity
 {
-    glm::mat4 worldMatrix;
+    std::string name;
+    vec3 pos;
+    vec3 rotAngle;
+    vec3 scale;
+    glm::mat4 worldMatrix = mat4(1.0f);
     u32 modelIdx;
+
     u32 localParamsOffset;
     u32 localParamsSize;
     
-    Entity(mat4 _worldMatrix, u32 _modelIdx, u32 _localParamsOffset,u32 _localParamsSize)
+    Entity(vec3 _pos, vec3 _rotAngle, vec3 _scale, u32 _modelIdx, u32 _localParamsOffset,u32 _localParamsSize)
     {
-        worldMatrix = _worldMatrix;
+        pos = _pos;
+        rotAngle = _rotAngle;
+        scale = _scale;
+        worldMatrix = glm::translate(worldMatrix, pos);
+        worldMatrix = glm::rotate(worldMatrix, glm::radians(_rotAngle.x), glm::vec3(1, 0, 0));//rotation x 
+        worldMatrix = glm::rotate(worldMatrix, glm::radians(_rotAngle.y), glm::vec3(0, 1, 0));//rotation y 
+        worldMatrix = glm::rotate(worldMatrix, glm::radians(_rotAngle.z), glm::vec3(0, 0, 1));//rotation z 
+        worldMatrix = glm::scale(worldMatrix, scale);
         modelIdx = _modelIdx;
         localParamsOffset = _localParamsOffset;
         localParamsSize = _localParamsSize;
@@ -156,10 +168,14 @@ struct Light
     vec3 dir;
     vec3 pos;
     LightType type;
-    u32 range;
+    std::string name;
+    float range;
     vec3 attenuation;
 
-    glm::mat4 worldMatrix;
+    glm::mat4 worldMatrix = mat4(1.0f);
+
+    u32 lightParamsOffset;
+    u32 lightParamsSize;
     u32 localParamsOffset;
     u32 localParamsSize;
 };
@@ -193,6 +209,11 @@ struct App
 
     // Lights
     std::vector<Light> lights;
+    Light* currentLight = nullptr;
+
+    Entity* currentEntity = nullptr;
+
+    u32 sphereId;
 
     // Graphics
     char gpuName[64];
@@ -211,8 +232,9 @@ struct App
     // program indices
     u32 texturedQuadProgramIdx;              // Location of the texture uniform in the textured quad shader
     u32 texturedGeometryProgramIdx;
-    u32 texturedLightProgramIdx;
-    
+    u32 texturedDLightProgramIdx;
+    u32 texturedPLightProgramIdx;
+
     // texture indices
     u32 diceTexIdx;
     u32 whiteTexIdx;

@@ -254,6 +254,18 @@ mat4 TransformPositionScale(const vec3& pos, const vec3& scaleFactors)
     return transform;
 }
 
+mat4 UpdateMat(vec3 _pos, vec3 _rotAngle, vec3 _scale)
+{
+    mat4 _worldMatrix = mat4(1.0f);
+    _worldMatrix = glm::translate(_worldMatrix, _pos);
+    _worldMatrix = glm::rotate(_worldMatrix, glm::radians(_rotAngle.x), glm::vec3(1, 0, 0));//rotation x 
+    _worldMatrix = glm::rotate(_worldMatrix, glm::radians(_rotAngle.y), glm::vec3(0, 1, 0));//rotation y 
+    _worldMatrix = glm::rotate(_worldMatrix, glm::radians(_rotAngle.z), glm::vec3(0, 0, 1));//rotation z 
+    _worldMatrix = glm::scale(_worldMatrix, _scale);
+
+    return _worldMatrix;
+}
+
 void InitializeTextureQuad(App* app, const char* shaderName)
 {  
     f32 vertices[] = {  1, 1, 0.0, 1.0, 1.0,
@@ -328,16 +340,13 @@ void InitializeTextureMesh(App* app, const char* shaderName)
 {
     u32 patrick = LoadModel(app, "Patrick/Patrick.obj");
 
-    Entity enTity1 = Entity(glm::mat4(1.0f), patrick, 0, 0);
-    enTity1.worldMatrix = TransformPositionScale(vec3(0.0, 2.0, 0.0), vec3(0.5f));
+    Entity enTity1 = Entity(vec3(0.0, 3.5, 0.0), vec3(0.0f), vec3(1.0f), patrick, 0, 0);
     app->enTities.push_back(enTity1);
 
-    Entity enTity2 = Entity(glm::mat4(1.0f), patrick, 0, 0);
-    enTity2.worldMatrix = TransformPositionScale(vec3(2.0, 2.0, 5.0), vec3(0.5f));
+    Entity enTity2 = Entity(vec3(5.0, 3.5, 5.0), vec3(0.0f), vec3(1.0f), patrick, 0, 0);
     app->enTities.push_back(enTity2);
 
-    Entity enTity3 = Entity(glm::mat4(1.0f), patrick, 0, 0);
-    enTity3.worldMatrix = TransformPositionScale(vec3(-2.0, 2.0, 5.0), vec3(0.5f));
+    Entity enTity3 = Entity(vec3(-5.0, 3.5, 5.0), vec3(0.0f), vec3(1.0f), patrick, 0, 0);
     app->enTities.push_back(enTity3);
 
     app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", shaderName);
@@ -347,10 +356,17 @@ void InitializeTextureMesh(App* app, const char* shaderName)
     app->mode = Mode_TextureMesh;
 }
 
-void InitializeTextureLight(App* app, const char* shaderName)
+void InitializeTextureDLight(App* app, const char* shaderName)
 {
-    app->texturedLightProgramIdx = LoadProgram(app, "shaders.glsl", shaderName);
-    Program& textureLightProgram = app->programs[app->texturedGeometryProgramIdx];
+    app->texturedDLightProgramIdx = LoadProgram(app, "shaders.glsl", shaderName);
+    Program& textureLightProgram = app->programs[app->texturedDLightProgramIdx];
+    app->textureLightProgram_uTexture = glGetUniformLocation(textureLightProgram.handle, "uTexture");
+}
+
+void InitializeTexturePLight(App* app, const char* shaderName)
+{
+    app->texturedPLightProgramIdx = LoadProgram(app, "shaders.glsl", shaderName);
+    Program& textureLightProgram = app->programs[app->texturedPLightProgramIdx];
     app->textureLightProgram_uTexture = glGetUniformLocation(textureLightProgram.handle, "uTexture");
 }
 
@@ -358,7 +374,7 @@ void InitializeTextureLight(App* app, const char* shaderName)
 u32 CreateFrameBuffers(App* app)
 {
     //Create Textures
-    for(int i = 0; i < 6; ++i)
+    for(int i = 0; i < 5; ++i)
     { 
         glGenTextures(1, &app->framebufferTexturesHandle[i]);
         glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[i]);
@@ -384,12 +400,11 @@ u32 CreateFrameBuffers(App* app)
     u32 framebufferHandle;
     glGenFramebuffers(1, &framebufferHandle);
     glBindFramebuffer(GL_FRAMEBUFFER, framebufferHandle);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, app->framebufferTexturesHandle[0], 0);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, app->framebufferTexturesHandle[1], 0);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->framebufferTexturesHandle[2], 0);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, app->framebufferTexturesHandle[3], 0);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, app->framebufferTexturesHandle[4], 0);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, app->framebufferTexturesHandle[5], 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, app->framebufferTexturesHandle[0], 0);       //Color
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, app->framebufferTexturesHandle[1], 0);       //Albedo    
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->framebufferTexturesHandle[2], 0);       //Normal
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, app->framebufferTexturesHandle[3], 0);       //Depth 
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, app->framebufferTexturesHandle[4], 0);       //Pos
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, app->depthAttachmentHandle, 0);
 
     GLenum framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -410,18 +425,12 @@ u32 CreateFrameBuffers(App* app)
         }
     }
 
-    u32 drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4, GL_COLOR_ATTACHMENT5 };
-
-    glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
     app->currentAttachmentHandle = app->framebufferTexturesHandle[0];
 
     return framebufferHandle;
 }
 
-void CreatePlane(App* app)
+u32 CreatePlane(App* app)
 {
     app->meshes.push_back(Mesh{});
     Mesh& mesh = app->meshes.back();
@@ -439,10 +448,10 @@ void CreatePlane(App* app)
     subMesh.indexOffset = 0;
 
     f32 vertices[] = {  
-        /*Position*/ 50.0, 0, 50.0, /*Normal*/ 0, 1.0, 0, /*TextCoords*/ 1.0, 1.0, /*Tangent*/ 0,0,0, /*Bitangent*/ 0,0,0,
-        /*Position*/ 50.0, 0, -50.0, /*Normal*/ 0, 1.0, 0, /*TextCoords*/ 1.0, 0.0, /*Tangent*/ 0,0,0, /*Bitangent*/ 0,0,0,
-        /*Position*/ -50.0, 0, -50.0, /*Normal*/ 0, 1.0, 0, /*TextCoords*/ 0.0, 0.0, /*Tangent*/ 0,0,0, /*Bitangent*/ 0,0,0,
-        /*Position*/ -50.0, 0, 50.0, /*Normal*/ 0, 1.0, 0, /*TextCoords*/ 0.0, 1.0, /*Tangent*/ 0,0,0, /*Bitangent*/ 0,0,0, };
+        /*Position*/ 1.0, 0, 1.0, /*Normal*/ 0, 1.0, 0, /*TextCoords*/ 1.0, 1.0, /*Tangent*/ 0,0,0, /*Bitangent*/ 0,0,0,
+        /*Position*/ 1.0, 0, -1.0, /*Normal*/ 0, 1.0, 0, /*TextCoords*/ 1.0, 0.0, /*Tangent*/ 0,0,0, /*Bitangent*/ 0,0,0,
+        /*Position*/ -1.0, 0, -1.0, /*Normal*/ 0, 1.0, 0, /*TextCoords*/ 0.0, 0.0, /*Tangent*/ 0,0,0, /*Bitangent*/ 0,0,0,
+        /*Position*/ -1.0, 0, 1.0, /*Normal*/ 0, 1.0, 0, /*TextCoords*/ 0.0, 1.0, /*Tangent*/ 0,0,0, /*Bitangent*/ 0,0,0, };
 
     u16 indices[] = { 3, 0, 1,
                       3, 1, 2};
@@ -513,11 +522,10 @@ void CreatePlane(App* app)
 
     model.materialIdx.push_back(materialIdx);
 
-    Entity entity = Entity(glm::mat4(1.0f), app->models.size() - 1, 0, 0);
-    app->enTities.push_back(entity);
+    return app->models.size() - 1;
 }
 
-void CreateSphere(App* app)
+u32 CreateSphere(App* app)
 {
     app->meshes.push_back(Mesh{});
     Mesh& mesh = app->meshes.back();
@@ -649,8 +657,7 @@ void CreateSphere(App* app)
 
     model.materialIdx.push_back(materialIdx);
 
-    Entity entity = Entity(glm::mat4(1.0f), app->models.size() - 1, 0, 0);
-    app->enTities.push_back(entity);
+    return app->models.size() - 1;
 }
 
 Light CreateLight(LightType type, vec3 pos, vec3 dir, vec3 col, float range)
@@ -663,6 +670,8 @@ Light CreateLight(LightType type, vec3 pos, vec3 dir, vec3 col, float range)
     light.col = col;
     light.range = range;
     light.attenuation = GetAttenuation(light.range);
+
+    light.worldMatrix = UpdateMat(pos, vec3(0.0f), vec3(range));
 
     return light;
 }
@@ -687,9 +696,16 @@ void Init(App* app)
 
     InitializeTextureQuad(app, "TEXTURE_FILLQUAD");
     InitializeTextureMesh(app,"TEXTURE_GEOMETRY");
-    InitializeTextureLight(app, "TEXTURE_LIGHT");
+    InitializeTextureDLight(app, "TEXTURE_DLIGHT");
+    InitializeTexturePLight(app, "TEXTURE_PLIGHT");
 
-    CreatePlane(app);
+    app->sphereId = CreateSphere(app);
+    Entity sphere = Entity(vec3(0), vec3(0.0f), vec3(1.0f), app->sphereId, 0, 0);
+    app->enTities.push_back(sphere);
+
+    u32 planeId = CreatePlane(app);
+    Entity plane = Entity(vec3(0), vec3(0.0f), vec3(100.0f), planeId, 0, 0);
+    app->enTities.push_back(plane);
 
     app->framebufferHandle = CreateFrameBuffers(app);
 
@@ -699,11 +715,14 @@ void Init(App* app)
     app->camera.aspectRatio = (float)app->displaySize.x / (float)app->displaySize.y;
 
     // Lights
-    Light light0 = CreateLight(LightType::Directional, vec3(1.0f, 0.0f, 5.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 200.0f);
-    Light light1 = CreateLight(LightType::Point, vec3(1.0f, 0.0f, 5.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 200.0f);
-    app->lights.push_back(light0);      
-    app->lights.push_back(light1);
+    Light light0 = CreateLight(LightType::Directional, vec3(1.0f, 0.0f, 5.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 0.0f);
+    app->lights.push_back(light0);
 
+    for (int i = 0; i < 3; ++i)
+    {
+        Light light1 = CreateLight(LightType::Point, vec3(1.0f + i, 0.0f, 5.0f + i), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 2.0f);
+        app->lights.push_back(light1);
+    }
 }
 
 void Docking()
@@ -755,14 +774,21 @@ void Gui(App* app)
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("Create Primitives")) {
+        if (ImGui::BeginMenu("Create ##primitive")) {
 
-            if (ImGui::MenuItem("Plane")) {
-                
+            if (ImGui::MenuItem("Plane ##primitive")) {
+
+                u32 planeId = CreatePlane(app);
+                Entity plane = Entity(vec3(0), vec3(0.0f), vec3(1.0f), planeId, 0, 0);
+                app->enTities.push_back(plane);
+                app->currentEntity = nullptr;
             }
-            if (ImGui::MenuItem("Sphere")) {
+            if (ImGui::MenuItem("Sphere ##primitive")) {
 
-                CreateSphere(app);
+                u32 sphereId = CreateSphere(app);
+                Entity sphere = Entity(vec3(0), vec3(0.0f), vec3(1.0f), sphereId, 0, 0);
+                app->enTities.push_back(sphere);
+                app->currentEntity = nullptr;
             }
             ImGui::EndMenu();
         }
@@ -795,48 +821,111 @@ void Gui(App* app)
                 }
                 if (ImGui::DragFloat3("Rotation ##camera", (float*)&app->camera.angles, 0.1f))
                 {
-
+                    
                 }
 
             }
             if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_CollapsingHeader))
             {
-                vec3 lightDir = app->lights[1].dir;
-                vec3 ligthPos = app->lights[1].pos;
-                vec3 ligthCol = app->lights[1].col;
 
-                if (ImGui::DragFloat3("Dir ##lights", (float*)&lightDir, 0.1f))
-                {
-                    app->lights[1].dir = lightDir;
+                if(ImGui::TreeNode("Lights ##2"))
+                { 
+                    for (int i = 0; i < app->lights.size(); ++i)
+                    {
+                        Light* light = &app->lights[i];
+
+                        switch (light->type)
+                        {
+                            case LightType::Directional:
+                               light->name = "Directional" + std::to_string(i);
+                            break; 
+                            case LightType::Point:
+                               light->name = "Point" + std::to_string(i);
+                            break;
+                        }
+
+                        if (ImGui::TreeNodeEx(light->name.c_str(),ImGuiTreeNodeFlags_Leaf))
+                        {
+                            if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+                                app->currentLight = light;
+
+                            ImGui::TreePop();
+                        }
+                    }
+                    ImGui::TreePop();
                 }
 
-                if (ImGui::DragFloat3("Position ##lights", (float*)&ligthPos, 0.1f))
+                if (app->currentLight != nullptr)
                 {
-                    app->lights[1].pos = ligthPos;
-                }
+                    switch (app->currentLight->type)
+                    {
+                    case LightType::Directional:
+                        {
+                            ImGui::Separator();
+                            ImVec4 col = ImVec4(app->currentLight->col.x, app->currentLight->col.y, app->currentLight->col.z, 1.0);
+                            ImGui::TextColored(col, app->currentLight->name.c_str());
+                            ImGui::Separator();
+                            ImGui::DragFloat3("Dir ##lights", (float*)glm::value_ptr(app->currentLight->dir), 0.1f);
+                            ImGui::ColorEdit3("Color ##lights", (float*)glm::value_ptr(app->currentLight->col));
+                            break;
+                        }
 
-                if (ImGui::DragFloat3("Color ##lights", (float*)&ligthCol, 0.01f,0.0f,1.0f))
-                {
-                    app->lights[1].col = ligthCol;
+                    case LightType::Point:
+                        {
+                            ImGui::Separator();
+                            ImVec4 col = ImVec4(app->currentLight->col.x, app->currentLight->col.y, app->currentLight->col.z, 1.0);
+                            ImGui::TextColored(col, app->currentLight->name.c_str());
+                            ImGui::Separator();
+                            ImGui::DragFloat3("Position ##lights2", (float*)glm::value_ptr(app->currentLight->pos), 0.1f);
+                            static float range = app->currentLight->range;
+                            if (ImGui::DragFloat("Range ##lights2", &range, 0.01f, 1.0f, 3250.0f))
+                            {
+                                app->currentLight->range = range;
+                                app->currentLight->attenuation = GetAttenuation(app->currentLight->range);
+                            }
+                            ImGui::ColorEdit3("Color ##lights2", (float*)glm::value_ptr(app->currentLight->col));
+                            app->currentLight->worldMatrix = UpdateMat(app->currentLight->pos, vec3(0.0f), vec3(app->currentLight->range));
+                            break;
+                        }
+                    }
                 }
-
+             
             }
             if (ImGui::CollapsingHeader("Entities", ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_CollapsingHeader))
             {
-                mat4 sphereMat = app->enTities[0].worldMatrix;
-
-                static vec3 pos = vec3(0);
-                static float radius = 1.0f;
-
-                if (ImGui::DragFloat3("Pos ##sphere", (float*)&pos, 0.1f))
+                if (ImGui::TreeNode("Entities ##2"))
                 {
-                    sphereMat = TransformPositionScale(pos, vec3(radius));
-                    app->enTities[0].worldMatrix = sphereMat;
+                    for (int i = 0; i < app->enTities.size(); ++i)
+                    {
+                        Entity* entity = &app->enTities[i];
+
+                        entity->name = "Entity" + std::to_string(i);
+
+                        if (ImGui::TreeNodeEx(entity->name.c_str(), ImGuiTreeNodeFlags_Leaf))
+                        {
+                            if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+                                app->currentEntity = entity;
+
+                            ImGui::TreePop();
+                        }
+                    }
+                    ImGui::TreePop();
                 }
-                if (ImGui::DragFloat("Radius ##sphere", (float*)&radius, 0.1f))
+
+                if (app->currentEntity != nullptr)
                 {
-                    sphereMat = TransformPositionScale(pos, vec3(radius));
-                    app->enTities[0].worldMatrix = sphereMat;
+                    mat4 entityMat = app->currentEntity->worldMatrix;
+
+                    ImGui::Separator();
+                    ImGui::TextColored(ImVec4(0.0,1.0,1.0,1.0), app->currentEntity->name.c_str());
+                    ImGui::Separator();
+
+                    ImGui::DragFloat3("Position ##entity", (float*)&app->currentEntity->pos, 0.1f);
+                    ImGui::DragFloat3("Rotation ##entity", (float*)&app->currentEntity->rotAngle, 0.1f);
+                    ImGui::DragFloat3("Scale ##entity", (float*)&app->currentEntity->scale, 0.1f);
+
+                    app->currentEntity->worldMatrix = UpdateMat(app->currentEntity->pos, app->currentEntity->rotAngle, app->currentEntity->scale);
+
                 }
 
             }
@@ -850,7 +939,7 @@ void Gui(App* app)
 
             ImGui::Text("Render Mode");
             ImGui::Separator();
-            const char* items[] = { "Scene", "Normal", "Albedo", "Depth", "Position", "Specular"};
+            const char* items[] = { "Scene", "Normal", "Albedo", "Depth", "Position"};
             static const char* current = "Scene";
 
             if (ImGui::BeginCombo("##views Mode", current))
@@ -865,11 +954,11 @@ void Gui(App* app)
                         {
                             app->currentAttachmentHandle = app->framebufferTexturesHandle[0];
                         }
-                        if (current == "Normal")
+                        if (current == "Albedo")
                         {
                             app->currentAttachmentHandle = app->framebufferTexturesHandle[1];
                         }
-                        if (current == "Albedo")
+                        if (current == "Normal")
                         {
                             app->currentAttachmentHandle = app->framebufferTexturesHandle[2];
                         }
@@ -881,10 +970,6 @@ void Gui(App* app)
                         {
                             app->currentAttachmentHandle = app->framebufferTexturesHandle[4];
                         }  
-                        if (current == "Specular")
-                        {
-                            app->currentAttachmentHandle = app->framebufferTexturesHandle[5];
-                        }
                     }
 
                     if (is_selected)
@@ -922,23 +1007,24 @@ void Update(App* app)
     app->gloabalParamsOffset = app->cBuffer.head;
 
     PushVec3(app->cBuffer, app->camera.pos);
-    PushUInt(app->cBuffer, app->lights.size());
+
+    app->gloabalParamsSize = app->cBuffer.head - app->gloabalParamsOffset;
 
     for (u32 i = 0; i < app->lights.size(); ++i)
     {
-        AlignHead(app->cBuffer, sizeof(vec4));
+        AlignHead(app->cBuffer, app->uniformBlockAlignment);
 
         Light& light = app->lights[i];
+
+        light.lightParamsOffset = app->cBuffer.head;
         PushVec3(app->cBuffer, light.col);
         PushVec3(app->cBuffer, light.dir);
         PushVec3(app->cBuffer, light.pos);
-        PushUInt(app->cBuffer, (u32)light.type);
         PushFloat(app->cBuffer, light.range);
         PushVec3(app->cBuffer, light.attenuation);
+        light.lightParamsSize = app->cBuffer.head - light.lightParamsOffset;
     }
     
-    app->gloabalParamsSize = app->cBuffer.head - app->gloabalParamsOffset;
-
     //Local Params
     for (u32 i = 0; i < app->enTities.size(); ++i)
     {
@@ -952,6 +1038,22 @@ void Update(App* app)
         PushMat4(app->cBuffer, world);
         PushMat4(app->cBuffer, worldViewProjection);
         entity.localParamsSize = app->cBuffer.head - entity.localParamsOffset;
+    }
+
+    //Push light Matrices
+
+    for (u32 i = 0; i < app->lights.size(); ++i)
+    {
+        AlignHead(app->cBuffer, app->uniformBlockAlignment);
+
+        Light&  light = app->lights[i];
+        mat4    world = light.worldMatrix;
+        mat4    worldViewProjection = app->projection * app->view * world;
+        
+        light.localParamsOffset = app->cBuffer.head;
+        PushMat4(app->cBuffer, world);
+        PushMat4(app->cBuffer, worldViewProjection);
+        light.localParamsSize = app->cBuffer.head - light.localParamsOffset;
     }
 
     glUnmapBuffer(GL_UNIFORM_BUFFER);
@@ -1014,7 +1116,12 @@ void DeferredShadingGeometryPass(App* app)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, app->framebufferHandle);
 
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    u32 drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, 
+        GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+
+    glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
+
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glEnable(GL_DEPTH_TEST);
@@ -1024,8 +1131,6 @@ void DeferredShadingGeometryPass(App* app)
 
     Program& textureMeshProgram = app->programs[app->texturedGeometryProgramIdx];
     glUseProgram(textureMeshProgram.handle);
-
-    glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->cBuffer.handle, app->gloabalParamsOffset, app->gloabalParamsSize);
 
     for (int j = 0; j < app->enTities.size(); ++j)
     {
@@ -1062,11 +1167,81 @@ void DeferredShadingGeometryPass(App* app)
 
 void DeferredShadingLightPass(App* app)
 {
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    glClear(GL_COLOR_BUFFER_BIT);
+
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_ONE, GL_ONE);
 
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->cBuffer.handle, app->gloabalParamsOffset, app->gloabalParamsSize);
 
+    for (int j = 0; j < app->lights.size(); ++j)
+    {
+        Program textureLightProgram;
+
+        //Change Program based on light type
+        
+        if (app->lights[j].type == LightType::Point)
+        {
+            textureLightProgram = app->programs[app->texturedPLightProgramIdx];
+        }
+        else
+            textureLightProgram = app->programs[app->texturedDLightProgramIdx];
+
+        glUseProgram(textureLightProgram.handle);
+
+        u32 loc = glGetUniformLocation(textureLightProgram.handle, "uTextureAlbedo");
+        glUniform1i(loc, 0);
+        loc = glGetUniformLocation(textureLightProgram.handle, "uTextureNormal");
+        glUniform1i(loc, 1);
+        loc = glGetUniformLocation(textureLightProgram.handle, "uTextureDepth");
+        glUniform1i(loc, 2);
+        loc = glGetUniformLocation(textureLightProgram.handle, "uTexturePos");
+        glUniform1i(loc, 3);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[1]);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[2]);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[3]);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[4]);
+
+        u32 lightBlockOffset = app->lights[j].lightParamsOffset;
+        u32 lightBlockSize = app->lights[j].lightParamsSize;
+        glBindBufferRange(GL_UNIFORM_BUFFER, 2, app->cBuffer.handle, lightBlockOffset, lightBlockSize);
+
+        if (app->lights[j].type == LightType::Point)
+        {
+    
+            Model& model = app->models[app->sphereId];
+            Mesh& mesh = app->meshes[model.meshIdx];
+
+            u32 blockOffset = app->lights[j].localParamsOffset;
+            u32 blockSize = app->lights[j].localParamsSize;
+            glBindBufferRange(GL_UNIFORM_BUFFER, 1, app->cBuffer.handle, blockOffset, blockSize);
+
+            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+            {
+                GLuint vao = FindVAO(mesh, i, textureLightProgram);
+                glBindVertexArray(vao);
+
+                u32 submeshMaterialIdx = model.materialIdx[i];
+                Material& submeshMaterial = app->materials[submeshMaterialIdx];
+
+                Submesh& submesh = mesh.submeshes[i];
+                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+            }
+
+        }
+        else
+        {
+            glBindVertexArray(app->vao);
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+        }
+    }
 }
 
 void Render(App* app)
@@ -1114,28 +1289,23 @@ void Render(App* app)
 
                 DeferredShadingGeometryPass(app);
 
-                Program& textureLightProgram = app->programs[app->texturedLightProgramIdx];
-                glUseProgram(textureLightProgram.handle);
-
-                glBindBufferRange(GL_UNIFORM_BUFFER, 0, app->cBuffer.handle, app->gloabalParamsOffset, app->gloabalParamsSize);
-
+                DeferredShadingLightPass(app);
 
                 glBindVertexArray(0);
                 glUseProgram(0);
 
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-                glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+                glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
                 glUseProgram(app->programs[app->texturedQuadProgramIdx].handle);
                 glBindVertexArray(app->vao);
 
-                glUniform1i(app->textureQuadProgram_uTexture, 0);
-
+                glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, app->currentAttachmentHandle);
-
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+                glBindTexture(GL_TEXTURE_2D, 0);
 
                 glBindVertexArray(0);
                 glUseProgram(0);
