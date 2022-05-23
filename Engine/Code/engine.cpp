@@ -790,6 +790,16 @@ void Gui(App* app)
                 app->enTities.push_back(sphere);
                 app->currentEntity = nullptr;
             }
+            if (ImGui::MenuItem("DLight ##primitive")) {
+
+                Light light = CreateLight(LightType::Directional, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 2.0f);
+                app->lights.push_back(light);
+            }
+            if (ImGui::MenuItem("PLight ##primitive")) {
+
+                Light light = CreateLight(LightType::Point, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 2.0f);
+                app->lights.push_back(light);
+            }
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
