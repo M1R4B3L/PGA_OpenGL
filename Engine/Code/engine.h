@@ -209,7 +209,7 @@ struct App
 
     // Lights
     std::vector<Light> lights;
-    Light* currentLight = nullptr;
+    u32 currentLight = -1;
 
     Entity* currentEntity = nullptr;
 

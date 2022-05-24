@@ -844,20 +844,21 @@ void Gui(App* app)
                     {
                         Light* light = &app->lights[i];
 
+                        
                         switch (light->type)
                         {
-                            case LightType::Directional:
-                               light->name = "Directional" + std::to_string(i);
-                            break; 
-                            case LightType::Point:
-                               light->name = "Point" + std::to_string(i);
+                        case LightType::Directional:
+                            light->name = "Directional" + std::to_string(i);
+                            break;
+                        case LightType::Point:
+                            light->name = "Point" + std::to_string(i);
                             break;
                         }
-
+                        
                         if (ImGui::TreeNodeEx(light->name.c_str(),ImGuiTreeNodeFlags_Leaf))
                         {
                             if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
-                                app->currentLight = light;
+                                app->currentLight = i;
 
                             ImGui::TreePop();
                         }
@@ -865,39 +866,57 @@ void Gui(App* app)
                     ImGui::TreePop();
                 }
 
-                if (app->currentLight != nullptr)
+                if (app->currentLight != -1)
                 {
-                    switch (app->currentLight->type)
+                    Light currentLight = app->lights[app->currentLight];
+                    switch (currentLight.type)
                     {
-                    case LightType::Directional:
+                        case LightType::Directional:
                         {
                             ImGui::Separator();
-                            ImVec4 col = ImVec4(app->currentLight->col.x, app->currentLight->col.y, app->currentLight->col.z, 1.0);
-                            ImGui::TextColored(col, app->currentLight->name.c_str());
+                            ImVec4 col = ImVec4(currentLight.col.x, currentLight.col.y, currentLight.col.z, 1.0);
+                            ImGui::TextColored(col, currentLight.name.c_str());
                             ImGui::Separator();
-                            ImGui::DragFloat3("Dir ##lights", (float*)glm::value_ptr(app->currentLight->dir), 0.1f);
-                            ImGui::ColorEdit3("Color ##lights", (float*)glm::value_ptr(app->currentLight->col));
+                            ImGui::DragFloat3("Dir##lights", (float*)&currentLight.dir, 0.1f);
+                            ImGui::ColorEdit3("Color##lights", (float*)&currentLight.col);
+                            if (ImGui::Button("Remove##lights"))
+                            {
+                                app->lights.erase(app->lights.begin() + app->currentLight);
+                                app->currentLight = -1;
+                            }
                             break;
                         }
 
-                    case LightType::Point:
+                        case LightType::Point:
                         {
                             ImGui::Separator();
-                            ImVec4 col = ImVec4(app->currentLight->col.x, app->currentLight->col.y, app->currentLight->col.z, 1.0);
-                            ImGui::TextColored(col, app->currentLight->name.c_str());
+                            ImVec4 col = ImVec4(currentLight.col.x, currentLight.col.y, currentLight.col.z, 1.0);
+                            ImGui::TextColored(col, currentLight.name.c_str());
                             ImGui::Separator();
-                            ImGui::DragFloat3("Position ##lights2", (float*)glm::value_ptr(app->currentLight->pos), 0.1f);
-                            static float range = app->currentLight->range;
-                            if (ImGui::DragFloat("Range ##lights2", &range, 0.01f, 1.0f, 3250.0f))
+                            ImGui::DragFloat3("Position##lights2", (float*)&currentLight.pos, 0.1f);
+                            static float range = currentLight.range;
+                            if (ImGui::DragFloat("Range##lights2", &range, 0.01f, 1.0f, 3250.0f))
                             {
-                                app->currentLight->range = range;
-                                app->currentLight->attenuation = GetAttenuation(app->currentLight->range);
+                                currentLight.range = range;
+                                currentLight.attenuation = GetAttenuation(currentLight.range);
                             }
-                            ImGui::ColorEdit3("Color ##lights2", (float*)glm::value_ptr(app->currentLight->col));
-                            app->currentLight->worldMatrix = UpdateMat(app->currentLight->pos, vec3(0.0f), vec3(app->currentLight->range));
+                            ImGui::ColorEdit3("Color##lights2", (float*)&currentLight.col);
+                            currentLight.worldMatrix = UpdateMat(currentLight.pos, vec3(0.0f), vec3(currentLight.range));
+                            if (ImGui::Button("Remove##lights"))
+                            {
+                                app->lights.erase(app->lights.begin() + app->currentLight);
+                                app->currentLight = -1;
+                            }
                             break;
+
                         }
                     }
+                }
+
+                if (ImGui::Button("Remove All Lights##lights"))
+                {
+                    app->lights.clear();
+                    app->currentLight = -1;
                 }
              
             }
