@@ -227,17 +227,17 @@ constexpr vec3 GetAttenuation(u32 range)
 {
     float constant = 1.0;
     if(range <= 7)      { return vec3(constant,0.7,    1.8); }
-    if(range <= 13)     { return vec3(constant,0.35,   0.44); }
-    if(range <= 20)     { return vec3(constant,0.22,   0.20); }
-    if(range <= 32)     { return vec3(constant,0.14,   0.07); }
-    if(range <= 50)     { return vec3(constant,0.09,   0.032); }
-    if(range <= 65)     { return vec3(constant,0.07,   0.017); }
-    if(range <= 100)    { return vec3(constant,0.045,  0.0075); }
-    if(range <= 160)    { return vec3(constant,0.027,  0.0028); }
-    if(range <= 200)    { return vec3(constant,0.022,  0.0019); }
-    if(range <= 325)    { return vec3(constant,0.014,  0.0007); }
-    if(range <= 600)    { return vec3(constant,0.007,  0.0002); }
-    if(range <= 3250)   { return vec3(constant,0.0014, 0.000007); }
+    else if(range <= 13)     { return vec3(constant,0.35,   0.44); }
+    else if(range <= 20)     { return vec3(constant,0.22,   0.20); }
+    else if(range <= 32)     { return vec3(constant,0.14,   0.07); }
+    else if(range <= 50)     { return vec3(constant,0.09,   0.032); }
+    else if(range <= 65)     { return vec3(constant,0.07,   0.017); }
+    else if(range <= 100)    { return vec3(constant,0.045,  0.0075); }
+    else if(range <= 160)    { return vec3(constant,0.027,  0.0028); }
+    else if(range <= 200)    { return vec3(constant,0.022,  0.0019); }
+    else if(range <= 325)    { return vec3(constant,0.014,  0.0007); }
+    else if(range <= 600)    { return vec3(constant,0.007,  0.0002); }
+    else if(range <= 3250)   { return vec3(constant,0.0014, 0.000007); }
 
 }
 
@@ -268,39 +268,13 @@ mat4 UpdateMat(vec3 _pos, vec3 _rotAngle, vec3 _scale)
 
 void InitializeTextureQuad(App* app, const char* shaderName)
 {  
-    f32 vertices[] = {  1, 1, 0.0, 1.0, 1.0,
+    f32 vertices[] = {  -1, -1, 0.0, 0.0, 0.0,
                         1,-1, 0.0, 1.0, 0.0,
-                       -1,-1, 0.0, 0.0, 0.0,
+                        1, 1, 0.0, 1.0, 1.0,
                        -1, 1, 0.0, 0.0, 1.0 };
 
     u16 indices[] = { 0, 1, 2,
                       0, 2, 3 };
-
-    std::vector<float> vertices2;
-    std::vector<float> indices2;
-
-    for(int i = 0; i < 20; ++i)
-        vertices2.push_back(vertices[i]);
-
-    for (int i = 0; i < 6; ++i)
-        indices2.push_back(indices[i]);
-
-    int stride = 0;
-
-    VertexBufferLayout vertexBufferLayout = {};
-    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 0, 3, 0 });
-    vertexBufferLayout.attributes.push_back(VertexBufferAttribute{ 1, 2, sizeof(float)*3 });
-    vertexBufferLayout.stride = 5 * sizeof(float);
-
-    Submesh submesh;
-    submesh.vertexBufferLayout = vertexBufferLayout;
-    submesh.vertices.swap(vertices2);
-    submesh.vertices.swap(indices2);
-
-    app->meshes.push_back(Mesh{});
-    Mesh& mesh = app->meshes.back();
-
-    mesh.submeshes.push_back(submesh);
 
     glGenBuffers(1, &app->embeddedVertices);
     glBindBuffer(GL_ARRAY_BUFFER, app->embeddedVertices);
@@ -336,19 +310,14 @@ void InitializeTextureQuad(App* app, const char* shaderName)
     app->mode = Mode_TexturedQuad;
 }
 
+void InitializeDepthStencil(App* app, const char* shaderName)
+{
+    app->texturedDepthStencil = LoadProgram(app, "shaders.glsl", shaderName);
+    Program& textureGeometryProgram = app->programs[app->texturedDepthStencil];
+}
+
 void InitializeTextureMesh(App* app, const char* shaderName)
 {
-    u32 patrick = LoadModel(app, "Patrick/Patrick.obj");
-
-    Entity enTity1 = Entity(vec3(0.0, 3.5, 0.0), vec3(0.0f), vec3(1.0f), patrick, 0, 0);
-    app->enTities.push_back(enTity1);
-
-    Entity enTity2 = Entity(vec3(5.0, 3.5, 5.0), vec3(0.0f), vec3(1.0f), patrick, 0, 0);
-    app->enTities.push_back(enTity2);
-
-    Entity enTity3 = Entity(vec3(-5.0, 3.5, 5.0), vec3(0.0f), vec3(1.0f), patrick, 0, 0);
-    app->enTities.push_back(enTity3);
-
     app->texturedGeometryProgramIdx = LoadProgram(app, "shaders.glsl", shaderName);
     Program& textureGeometryProgram = app->programs[app->texturedGeometryProgramIdx];
     app->textureMeshProgram_uTexture = glGetUniformLocation(textureGeometryProgram.handle, "uTexture");
@@ -370,6 +339,15 @@ void InitializeTexturePLight(App* app, const char* shaderName)
     app->textureLightProgram_uTexture = glGetUniformLocation(textureLightProgram.handle, "uTexture");
 }
 
+void InitailizeTextureNormalMap(App* app, const char* shaderName)
+{
+    app->texturedNormalMapIdx = LoadProgram(app, "shaders.glsl", shaderName);
+    Program& textureNormalMapProgram = app->programs[app->texturedNormalMapIdx];
+
+    app->textureMeshProgram_uTexture = glGetUniformLocation(textureNormalMapProgram.handle, "uTexture");
+    app->textureNormalMapProgram_uTexture = glGetUniformLocation(textureNormalMapProgram.handle, "uWormalMap");
+}
+
 
 u32 CreateFrameBuffers(App* app)
 {
@@ -378,7 +356,7 @@ u32 CreateFrameBuffers(App* app)
     { 
         glGenTextures(1, &app->framebufferTexturesHandle[i]);
         glBindTexture(GL_TEXTURE_2D, app->framebufferTexturesHandle[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, app->displaySize.x, app->displaySize.y, 0, GL_RGBA, GL_FLOAT, NULL);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);    //Time / Repeticion para texturas animadas
@@ -389,7 +367,7 @@ u32 CreateFrameBuffers(App* app)
 
     glGenTextures(1, &app->depthAttachmentHandle);
     glBindTexture(GL_TEXTURE_2D, app->depthAttachmentHandle);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, app->displaySize.x, app->displaySize.y, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -405,12 +383,11 @@ u32 CreateFrameBuffers(App* app)
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, app->framebufferTexturesHandle[2], 0);       //Normal
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, app->framebufferTexturesHandle[3], 0);       //Depth 
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, app->framebufferTexturesHandle[4], 0);       //Pos
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, app->depthAttachmentHandle, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, app->depthAttachmentHandle, 0);
 
     GLenum framebufferStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE)
     {
-
         switch (framebufferStatus)
         {
             case GL_FRAMEBUFFER_UNDEFINED:                      ELOG("GL_FRAMEBUFFER_UNDEFINED"); break;
@@ -448,13 +425,13 @@ u32 CreatePlane(App* app)
     subMesh.indexOffset = 0;
 
     f32 vertices[] = {  
-        /*Position*/ 1.0, 0, 1.0, /*Normal*/ 0, 1.0, 0, /*TextCoords*/ 1.0, 1.0, /*Tangent*/ 0,0,0, /*Bitangent*/ 0,0,0,
-        /*Position*/ 1.0, 0, -1.0, /*Normal*/ 0, 1.0, 0, /*TextCoords*/ 1.0, 0.0, /*Tangent*/ 0,0,0, /*Bitangent*/ 0,0,0,
-        /*Position*/ -1.0, 0, -1.0, /*Normal*/ 0, 1.0, 0, /*TextCoords*/ 0.0, 0.0, /*Tangent*/ 0,0,0, /*Bitangent*/ 0,0,0,
-        /*Position*/ -1.0, 0, 1.0, /*Normal*/ 0, 1.0, 0, /*TextCoords*/ 0.0, 1.0, /*Tangent*/ 0,0,0, /*Bitangent*/ 0,0,0, };
+        /*Position*/ -1.0, 1.0, 0.0, /*Normal*/ 0, 0, 1.0, /*TextCoords*/ 0.0, 1.0, /*Tangent*/ 1,0,0, /*Bitangent*/ 0,1,0,
+        /*Position*/ -1.0, -1.0, 0.0, /*Normal*/ 0, 0, 1.0, /*TextCoords*/ 0.0, 0.0, /*Tangent*/ 1,0,0, /*Bitangent*/ 0,1,0,
+        /*Position*/  1.0, -1.0, 0.0, /*Normal*/ 0, 0, 1.0, /*TextCoords*/ 1.0, 0.0, /*Tangent*/ 1,0,0, /*Bitangent*/ 0,1,0,
+        /*Position*/  1.0, 1.0, 0.0, /*Normal*/ 0, 0, 1.0, /*TextCoords*/ 1.0, 1.0, /*Tangent*/ 1,0,0, /*Bitangent*/ 0,1,0, };
 
-    u16 indices[] = { 3, 0, 1,
-                      3, 1, 2};
+    u16 indices[] = { 0, 1, 2,
+                      0, 2, 3};
 
     for (int i = 0; i < 56; ++i)
     {
@@ -516,10 +493,11 @@ u32 CreatePlane(App* app)
 
     app->materials.push_back(Material{});
     Material& material = app->materials.back();
-    material.albedo = vec3(0);
-
-    u32 materialIdx = 0;
-
+    material.name = "PlaneMat";
+    material.albedo = vec3(1);
+    material.albedoTextureIdx = LoadTexture2D(app, "brickwall.jpg");
+    material.normalsTextureIdx = LoadTexture2D(app, "brickwall_normal.jpg");
+    u32 materialIdx = app->materials.size() - 1;
     model.materialIdx.push_back(materialIdx);
 
     return app->models.size() - 1;
@@ -651,10 +629,11 @@ u32 CreateSphere(App* app)
 
     app->materials.push_back(Material{});
     Material& material = app->materials.back();
-    material.albedo = vec3(0);
-
-    u32 materialIdx = 0;
-
+    material.name = "SphereMat";
+    material.albedo = vec3(1);
+    material.albedoTextureIdx = app->whiteTexIdx;
+    material.bumpTextureIdx = app->whiteTexIdx;
+    u32 materialIdx = app->materials.size() - 1;
     model.materialIdx.push_back(materialIdx);
 
     return app->models.size() - 1;
@@ -694,18 +673,39 @@ void Init(App* app)
     glBufferData(GL_UNIFORM_BUFFER, app->maxUniformBufferSize, NULL, GL_STREAM_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
+
     InitializeTextureQuad(app, "TEXTURE_FILLQUAD");
     InitializeTextureMesh(app,"TEXTURE_GEOMETRY");
+    InitializeDepthStencil(app, "TEXTURE_DEPTHSTENCIL");
     InitializeTextureDLight(app, "TEXTURE_DLIGHT");
     InitializeTexturePLight(app, "TEXTURE_PLIGHT");
 
+    InitailizeTextureNormalMap(app, "TEXTURE_NORMALMAPPING");
+
+    //Patricks
+    u32 patrick = LoadModel(app, "Patrick/Patrick.obj");
+    Entity enTity1 = Entity(vec3(0.0, 3.5, 0.0), vec3(0.0f), vec3(1.0f), patrick, 0, 0);
+    enTity1.name = "Patrick" + std::to_string(app->enTities.size());
+    app->enTities.push_back(enTity1);
+    Entity enTity2 = Entity(vec3(5.0, 3.5, 5.0), vec3(0.0f), vec3(1.0f), patrick, 0, 0);
+    enTity2.name = "Patrick" + std::to_string(app->enTities.size());
+    app->enTities.push_back(enTity2);
+
+    u32 cyborg = LoadModel(app, "Cyborg/cyborg.obj");
+    Entity enTity3 = Entity(vec3(-5.0, 3.5, 5.0), vec3(0.0f), vec3(2.0f), cyborg, 0, 0);
+    enTity3.name = "Cyborg" + std::to_string(app->enTities.size());
+    app->enTities.push_back(enTity3);
+
     app->sphereId = CreateSphere(app);
     Entity sphere = Entity(vec3(0), vec3(0.0f), vec3(1.0f), app->sphereId, 0, 0);
+    sphere.name = "Sphere" + std::to_string(app->enTities.size());
     app->enTities.push_back(sphere);
 
     u32 planeId = CreatePlane(app);
     Entity plane = Entity(vec3(0), vec3(0.0f), vec3(100.0f), planeId, 0, 0);
+    plane.name = "Plane" + std::to_string(app->enTities.size());
     app->enTities.push_back(plane);
+    
 
     app->framebufferHandle = CreateFrameBuffers(app);
 
@@ -718,11 +718,8 @@ void Init(App* app)
     Light light0 = CreateLight(LightType::Directional, vec3(1.0f, 0.0f, 5.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 0.0f);
     app->lights.push_back(light0);
 
-    for (int i = 0; i < 3; ++i)
-    {
-        Light light1 = CreateLight(LightType::Point, vec3(1.0f + i, 0.0f, 5.0f + i), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 2.0f);
-        app->lights.push_back(light1);
-    }
+    Light light2 = CreateLight(LightType::Point, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 20.0f);
+    app->lights.push_back(light2);
 }
 
 void Docking()
@@ -778,15 +775,15 @@ void Gui(App* app)
 
             if (ImGui::MenuItem("Plane ##primitive")) {
 
-                u32 planeId = CreatePlane(app);
-                Entity plane = Entity(vec3(0), vec3(0.0f), vec3(1.0f), planeId, 0, 0);
+                Entity plane = Entity(vec3(0), vec3(0.0f), vec3(1.0f), 3, 0, 0);
+                plane.name = "Plane" + std::to_string(app->enTities.size());
                 app->enTities.push_back(plane);
                 app->currentEntity = nullptr;
             }
             if (ImGui::MenuItem("Sphere ##primitive")) {
 
-                u32 sphereId = CreateSphere(app);
-                Entity sphere = Entity(vec3(0), vec3(0.0f), vec3(1.0f), sphereId, 0, 0);
+                Entity sphere = Entity(vec3(0), vec3(0.0f), vec3(1.0f), 2, 0, 0);
+                sphere.name = "Sphere" + std::to_string(app->enTities.size());
                 app->enTities.push_back(sphere);
                 app->currentEntity = nullptr;
             }
@@ -877,13 +874,19 @@ void Gui(App* app)
                             ImVec4 col = ImVec4(currentLight.col.x, currentLight.col.y, currentLight.col.z, 1.0);
                             ImGui::TextColored(col, currentLight.name.c_str());
                             ImGui::Separator();
-                            ImGui::DragFloat3("Dir##lights", (float*)&currentLight.dir, 0.1f);
+                            ImGui::DragFloat3("Dir##lights", (float*)&currentLight.dir, 0.01f, -1.0f, 1.0f);
                             ImGui::ColorEdit3("Color##lights", (float*)&currentLight.col);
                             if (ImGui::Button("Remove##lights"))
                             {
                                 app->lights.erase(app->lights.begin() + app->currentLight);
                                 app->currentLight = -1;
                             }
+
+                            if (app->currentLight != -1)
+                            {
+                                app->lights[app->currentLight] = currentLight;
+                            }
+
                             break;
                         }
 
@@ -902,10 +905,16 @@ void Gui(App* app)
                             }
                             ImGui::ColorEdit3("Color##lights2", (float*)&currentLight.col);
                             currentLight.worldMatrix = UpdateMat(currentLight.pos, vec3(0.0f), vec3(currentLight.range));
+
                             if (ImGui::Button("Remove##lights"))
                             {
                                 app->lights.erase(app->lights.begin() + app->currentLight);
                                 app->currentLight = -1;
+                            }
+
+                            if (app->currentLight != -1)
+                            {
+                                app->lights[app->currentLight] = currentLight;
                             }
                             break;
 
@@ -927,8 +936,6 @@ void Gui(App* app)
                     for (int i = 0; i < app->enTities.size(); ++i)
                     {
                         Entity* entity = &app->enTities[i];
-
-                        entity->name = "Entity" + std::to_string(i);
 
                         if (ImGui::TreeNodeEx(entity->name.c_str(), ImGuiTreeNodeFlags_Leaf))
                         {
@@ -1008,6 +1015,8 @@ void Gui(App* app)
                 }
                 ImGui::EndCombo();
             }
+
+            ImGui::Checkbox("Normal Mapping", &app->isNormalMap);
 
             ImGui::End();
         }
@@ -1150,16 +1159,19 @@ void DeferredShadingGeometryPass(App* app)
 
     glDrawBuffers(ARRAY_COUNT(drawBuffers), drawBuffers);
 
+    glStencilMask(GL_TRUE);
+    glDepthMask(GL_TRUE);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     glEnable(GL_DEPTH_TEST);
+
     glDisable(GL_BLEND);
 
     glViewport(0, 0, app->displaySize.x, app->displaySize.y);
 
-    Program& textureMeshProgram = app->programs[app->texturedGeometryProgramIdx];
-    glUseProgram(textureMeshProgram.handle);
+    Program* textureMeshProgram = &app->programs[app->texturedGeometryProgramIdx];
+    glUseProgram(textureMeshProgram->handle);
 
     for (int j = 0; j < app->enTities.size(); ++j)
     {
@@ -1173,22 +1185,33 @@ void DeferredShadingGeometryPass(App* app)
 
         for (u32 i = 0; i < mesh.submeshes.size(); ++i)
         {
-            GLuint vao = FindVAO(mesh, i, textureMeshProgram);
+            u32 submeshMaterialIdx = model.materialIdx[i];
+            Material* submeshMaterial = &app->materials[submeshMaterialIdx];
+
+            if (submeshMaterial->normalsTextureIdx != 0 && app->isNormalMap == true)
+            {
+                textureMeshProgram = &app->programs[app->texturedNormalMapIdx];
+                glUseProgram(textureMeshProgram->handle);
+
+                glActiveTexture(GL_TEXTURE1);
+                glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial->normalsTextureIdx].handle);
+                glUniform1i(app->textureNormalMapProgram_uTexture, 1);
+            }
+
+            GLuint vao = FindVAO(mesh, i, *textureMeshProgram);
             glBindVertexArray(vao);
 
-            u32 submeshMaterialIdx = model.materialIdx[i];
-            Material& submeshMaterial = app->materials[submeshMaterialIdx];
-
-            glActiveTexture(GL_TEXTURE);
-            glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial.albedoTextureIdx].handle);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, app->textures[submeshMaterial->albedoTextureIdx].handle);
             glUniform1i(app->textureMeshProgram_uTexture, 0);
-
+            
             Submesh& submesh = mesh.submeshes[i];
             glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+
+            textureMeshProgram = &app->programs[app->texturedGeometryProgramIdx];
+            glUseProgram(textureMeshProgram->handle);
         }
     }
-
-    glDisable(GL_DEPTH_TEST);
 
     glBindVertexArray(0);
     glUseProgram(0);
@@ -1197,9 +1220,17 @@ void DeferredShadingGeometryPass(App* app)
 void DeferredShadingLightPass(App* app)
 {
     glDrawBuffer(GL_COLOR_ATTACHMENT0);
-    glClear(GL_COLOR_BUFFER_BIT);
+
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+    glStencilMask(GL_FALSE);
+    glDepthMask(GL_FALSE);
+
+    glDisable(GL_DEPTH_TEST);
 
     glEnable(GL_BLEND);
+
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_ONE, GL_ONE);
 
@@ -1207,26 +1238,26 @@ void DeferredShadingLightPass(App* app)
 
     for (int j = 0; j < app->lights.size(); ++j)
     {
-        Program textureLightProgram;
+        Program* textureLightProgram = &app->programs[app->texturedDLightProgramIdx];
 
         //Change Program based on light type
         
         if (app->lights[j].type == LightType::Point)
         {
-            textureLightProgram = app->programs[app->texturedPLightProgramIdx];
+            textureLightProgram = &app->programs[app->texturedPLightProgramIdx];
         }
         else
-            textureLightProgram = app->programs[app->texturedDLightProgramIdx];
+            textureLightProgram = &app->programs[app->texturedDLightProgramIdx];
 
-        glUseProgram(textureLightProgram.handle);
+        glUseProgram(textureLightProgram->handle);
 
-        u32 loc = glGetUniformLocation(textureLightProgram.handle, "uTextureAlbedo");
+        u32 loc = glGetUniformLocation(textureLightProgram->handle, "uTextureAlbedo");
         glUniform1i(loc, 0);
-        loc = glGetUniformLocation(textureLightProgram.handle, "uTextureNormal");
-        glUniform1i(loc, 1);
-        loc = glGetUniformLocation(textureLightProgram.handle, "uTextureDepth");
-        glUniform1i(loc, 2);
-        loc = glGetUniformLocation(textureLightProgram.handle, "uTexturePos");
+        loc = glGetUniformLocation(textureLightProgram->handle, "uTextureNormal");
+        glUniform1i(loc, 1);                         
+        loc = glGetUniformLocation(textureLightProgram->handle, "uTextureDepth");
+        glUniform1i(loc, 2);                       
+        loc = glGetUniformLocation(textureLightProgram->handle, "uTexturePos");
         glUniform1i(loc, 3);
 
         glActiveTexture(GL_TEXTURE0);
@@ -1244,17 +1275,26 @@ void DeferredShadingLightPass(App* app)
 
         if (app->lights[j].type == LightType::Point)
         {
+            glDisable(GL_CULL_FACE);
+            glEnable(GL_DEPTH_TEST);
+            glEnable(GL_STENCIL_TEST);
+
+            glStencilMask(GL_TRUE);
+            glStencilFunc(GL_ALWAYS, 0, 0);
+            glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
+            glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
+            glDrawBuffer(GL_NONE);
+
+            glUseProgram(app->programs[app->texturedDepthStencil].handle);
     
             Model& model = app->models[app->sphereId];
             Mesh& mesh = app->meshes[model.meshIdx];
-
             u32 blockOffset = app->lights[j].localParamsOffset;
             u32 blockSize = app->lights[j].localParamsSize;
             glBindBufferRange(GL_UNIFORM_BUFFER, 1, app->cBuffer.handle, blockOffset, blockSize);
-
             for (u32 i = 0; i < mesh.submeshes.size(); ++i)
             {
-                GLuint vao = FindVAO(mesh, i, textureLightProgram);
+                GLuint vao = FindVAO(mesh, i, app->programs[app->texturedDepthStencil]);
                 glBindVertexArray(vao);
 
                 u32 submeshMaterialIdx = model.materialIdx[i];
@@ -1264,6 +1304,33 @@ void DeferredShadingLightPass(App* app)
                 glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
             }
 
+            glDrawBuffer(GL_COLOR_ATTACHMENT0);
+            glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
+            glStencilMask(GL_FALSE);
+
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_FRONT);
+
+            glDisable(GL_DEPTH_TEST);
+
+            glUseProgram(textureLightProgram->handle);
+
+            for (u32 i = 0; i < mesh.submeshes.size(); ++i)
+            {
+                GLuint vao = FindVAO(mesh, i, *textureLightProgram);
+                glBindVertexArray(vao);
+
+                u32 submeshMaterialIdx = model.materialIdx[i];
+                Material& submeshMaterial = app->materials[submeshMaterialIdx];
+
+                Submesh& submesh = mesh.submeshes[i];
+                glDrawElements(GL_TRIANGLES, submesh.indices.size(), GL_UNSIGNED_INT, (void*)(u64)submesh.indexOffset);
+            }
+
+            glCullFace(GL_BACK);
+            glDisable(GL_STENCIL_TEST);
+            glStencilMask(GL_TRUE);
+            glClear(GL_STENCIL_BUFFER_BIT);
         }
         else
         {
@@ -1326,7 +1393,7 @@ void Render(App* app)
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
                 glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
                 glUseProgram(app->programs[app->texturedQuadProgramIdx].handle);
                 glBindVertexArray(app->vao);

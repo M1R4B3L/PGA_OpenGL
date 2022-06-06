@@ -209,8 +209,8 @@ struct App
 
     // Lights
     std::vector<Light> lights;
-    u32 currentLight = -1;
 
+    u32 currentLight = -1;
     Entity* currentEntity = nullptr;
 
     u32 sphereId;
@@ -232,8 +232,10 @@ struct App
     // program indices
     u32 texturedQuadProgramIdx;              // Location of the texture uniform in the textured quad shader
     u32 texturedGeometryProgramIdx;
+    u32 texturedDepthStencil;
     u32 texturedDLightProgramIdx;
     u32 texturedPLightProgramIdx;
+    u32 texturedNormalMapIdx;
 
     // texture indices
     u32 diceTexIdx;
@@ -246,6 +248,7 @@ struct App
     u32 textureQuadProgram_uTexture;
     u32 textureMeshProgram_uTexture;
     u32 textureLightProgram_uTexture;
+    u32 textureNormalMapProgram_uTexture;
 
     // Mode
     Mode mode;
@@ -273,6 +276,8 @@ struct App
     u32 currentAttachmentHandle;
 
     u32 framebufferTexturesHandle[6];
+
+    bool isNormalMap = true;
 
     /*u32 colorAttachmentHandle;
     u32 normalAttachmentHandle;
