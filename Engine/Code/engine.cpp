@@ -702,10 +702,12 @@ void Init(App* app)
     app->enTities.push_back(sphere);
 
     u32 planeId = CreatePlane(app);
-    Entity plane = Entity(vec3(0), vec3(0.0f), vec3(100.0f), planeId, 0, 0);
+    Entity plane = Entity(vec3(0), vec3(0.0f), vec3(20.0f), planeId, 0, 0);
     plane.name = "Plane" + std::to_string(app->enTities.size());
     app->enTities.push_back(plane);
-    
+    Entity plane1 = Entity(vec3(0), vec3(-90.0f,0.0f,0.0f), vec3(20.0f), planeId, 0, 0);
+    plane1.name = "Plane" + std::to_string(app->enTities.size());
+    app->enTities.push_back(plane1);
 
     app->framebufferHandle = CreateFrameBuffers(app);
 
@@ -718,8 +720,11 @@ void Init(App* app)
     Light light0 = CreateLight(LightType::Directional, vec3(1.0f, 0.0f, 5.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 0.0f);
     app->lights.push_back(light0);
 
-    Light light2 = CreateLight(LightType::Point, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 20.0f);
-    app->lights.push_back(light2);
+    for (int i = 0; i < 3; ++i)
+    {
+        Light light2 = CreateLight(LightType::Point, vec3(-7.0f+(i*5.0f), 2.0f, 0.0f), vec3(1.0f), vec3(0.0f + i, 1.0f, 1.0f - i), 10.0f);
+        app->lights.push_back(light2);
+    }
 }
 
 void Docking()
@@ -772,30 +777,52 @@ void Gui(App* app)
         }
 
         if (ImGui::BeginMenu("Create ##primitive")) {
+            if (ImGui::BeginMenu("Entities"))
+            {
+                if (ImGui::MenuItem("Plane ##primitive")) {
 
-            if (ImGui::MenuItem("Plane ##primitive")) {
+                    Entity plane = Entity(vec3(0), vec3(0.0f), vec3(1.0f), 3, 0, 0);
+                    plane.name = "Plane" + std::to_string(app->enTities.size());
+                    app->enTities.push_back(plane);
+                    app->currentEntity = nullptr;
+                }
+                if (ImGui::MenuItem("Sphere ##primitive")) {
 
-                Entity plane = Entity(vec3(0), vec3(0.0f), vec3(1.0f), 3, 0, 0);
-                plane.name = "Plane" + std::to_string(app->enTities.size());
-                app->enTities.push_back(plane);
-                app->currentEntity = nullptr;
+                    Entity sphere = Entity(vec3(0), vec3(0.0f), vec3(1.0f), 2, 0, 0);
+                    sphere.name = "Sphere" + std::to_string(app->enTities.size());
+                    app->enTities.push_back(sphere);
+                    app->currentEntity = nullptr;
+                }
+                if (ImGui::MenuItem("Patrick ##primitive")) {
+
+                    Entity patrick = Entity(vec3(0), vec3(0.0f), vec3(1.0f), 0, 0, 0);
+                    patrick.name = "Patrick" + std::to_string(app->enTities.size());
+                    app->enTities.push_back(patrick);
+                    app->currentEntity = nullptr;
+                }
+                if (ImGui::MenuItem("Cyborg ##primitive")) {
+
+                    Entity cyborg = Entity(vec3(0), vec3(0.0f), vec3(1.0f), 1, 0, 0);
+                    cyborg.name = "Cyborg" + std::to_string(app->enTities.size());
+                    app->enTities.push_back(cyborg);
+                    app->currentEntity = nullptr;
+                }
+
+                ImGui::EndMenu();
             }
-            if (ImGui::MenuItem("Sphere ##primitive")) {
+            if (ImGui::BeginMenu("Lights"))
+            {
+                if (ImGui::MenuItem("DLight ##primitive")) {
 
-                Entity sphere = Entity(vec3(0), vec3(0.0f), vec3(1.0f), 2, 0, 0);
-                sphere.name = "Sphere" + std::to_string(app->enTities.size());
-                app->enTities.push_back(sphere);
-                app->currentEntity = nullptr;
-            }
-            if (ImGui::MenuItem("DLight ##primitive")) {
+                    Light light = CreateLight(LightType::Directional, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 2.0f);
+                    app->lights.push_back(light);
+                }
+                if (ImGui::MenuItem("PLight ##primitive")) {
 
-                Light light = CreateLight(LightType::Directional, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 2.0f);
-                app->lights.push_back(light);
-            }
-            if (ImGui::MenuItem("PLight ##primitive")) {
-
-                Light light = CreateLight(LightType::Point, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 2.0f);
-                app->lights.push_back(light);
+                    Light light = CreateLight(LightType::Point, vec3(0.0f, 0.0f, 0.0f), vec3(1.0f), vec3(1.0f, 1.0f, 1.0f), 2.0f);
+                    app->lights.push_back(light);
+                }
+                ImGui::EndMenu();
             }
             ImGui::EndMenu();
         }
@@ -956,12 +983,37 @@ void Gui(App* app)
                     ImGui::TextColored(ImVec4(0.0,1.0,1.0,1.0), app->currentEntity->name.c_str());
                     ImGui::Separator();
 
+                    static int id = app->currentEntity->modelIdx;
+                    if(ImGui::DragInt("MeshId", &id, 1, 0, 3))
+                    {
+                        if (id > 3)
+                        {
+                            id = 3;
+                            app->currentEntity->modelIdx = id;
+                        }
+                        else if (id < 0)
+                        {
+                            id = 0;
+                            app->currentEntity->modelIdx = id;
+                        }
+                        else
+                        {
+                            app->currentEntity->modelIdx = id;
+                        }
+                    }
+
                     ImGui::DragFloat3("Position ##entity", (float*)&app->currentEntity->pos, 0.1f);
                     ImGui::DragFloat3("Rotation ##entity", (float*)&app->currentEntity->rotAngle, 0.1f);
                     ImGui::DragFloat3("Scale ##entity", (float*)&app->currentEntity->scale, 0.1f);
 
                     app->currentEntity->worldMatrix = UpdateMat(app->currentEntity->pos, app->currentEntity->rotAngle, app->currentEntity->scale);
 
+                }
+
+                if (ImGui::Button("Remove All Entities##entities"))
+                {
+                    app->enTities.clear();
+                    app->currentEntity = nullptr;
                 }
 
             }

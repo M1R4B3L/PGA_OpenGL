@@ -206,7 +206,7 @@ void main()
 	//Diffuse
 	vec3 lightDir = normalize(uLight.dir); 
 	float diff = max(dot(normal, lightDir), 0.0);
-	vec3 diffuse = diff * uLight.col;
+	vec3 diffuse = diff * uLight.col * 0.5;
 
 	//Specular
 	vec3 viewDir = normalize(uCameraPosition - pos); 
@@ -282,13 +282,13 @@ void main()
 	vec3 pos = texture(uTexturePos, texCoord).xyz;
 
 	//Ambient
-	float ambientStrength = 0.3;
+	float ambientStrength = 0.1;
     vec3 ambient = ambientStrength * uLight.col;
 
 	//Diffuse
 	vec3 lightDir = normalize(uLight.pos - pos);
 	float diff = max(dot(normal, lightDir),0.0);
-	vec3 diffuse = diff * uLight.col;
+	vec3 diffuse = diff * uLight.col * 0.5;
 
 	//Specular
 	vec3 viewDir = normalize(uCameraPosition - pos); 
